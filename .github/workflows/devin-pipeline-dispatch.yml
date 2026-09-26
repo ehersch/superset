@@ -80,16 +80,24 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
         run: |
+          mkdir -p site
           python -m devin_pipeline.pipeline.cli report --out report.md
-          python -m devin_pipeline.pipeline.cli metrics --out metrics.json
+          python -m devin_pipeline.pipeline.cli metrics --out site/metrics.json
+          python -m devin_pipeline.pipeline.cli dashboard --out site/index.html
+          cp report.md site/report.md
           cat report.md >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: devin-pipeline-report
-          path: |
-            report.md
-            metrics.json
+          path: site
+
+      # The dashboard is published from the state branch so a leader has a
+      # stable URL rather than a per-run artifact to dig out of Actions.
+      - if: github.event_name != 'pull_request'
+        run: bash devin_pipeline/scripts/state_sync.sh publish site
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - if: always()
         run: bash devin_pipeline/scripts/state_sync.sh push

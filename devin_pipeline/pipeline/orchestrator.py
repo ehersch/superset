@@ -37,6 +37,7 @@ from .config import (
     IN_PROGRESS_LABEL,
     LABELS,
 )
+from .dashboard import render as render_dashboard
 from .detectors.base import registry
 from .devin_client import DevinClient, extract_pr_url, session_is_terminal
 from .github_client import GitHubClient
@@ -263,6 +264,8 @@ class Pipeline:
         self.github.remove_label(number, IN_PROGRESS_LABEL)
         verification = (structured.get("verification") or "").strip()
         blockers = (structured.get("blockers") or "").strip()
+        attempt.verification = verification
+        attempt.blockers = blockers
 
         if attempt.outcome == Outcome.FIXED.value and attempt.pr_url:
             self.github.add_labels(number, [DONE_LABEL])
@@ -403,6 +406,12 @@ class Pipeline:
                 round(sorted(durations)[len(durations) // 2], 1) if durations else None
             ),
         }
+
+    def dashboard(self) -> str:
+        """The ledger as a standalone HTML status page."""
+        return render_dashboard(
+            self.config.repo, list(self.state.records.values()), self.metrics()
+        )
 
     def report(self) -> str:
         records = sorted(self.state.records.values(), key=lambda r: r.issue_number)

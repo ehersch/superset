@@ -88,8 +88,19 @@ reviewable PRs beat twenty.
   CI retries, outcome and PR.
 - **`metrics.json`** (same artifact) carries those figures as JSON, so they can
   be scraped into a dashboard instead of read by eye.
+- **Status dashboard** — a standalone `index.html` published to the `gh-pages`
+  branch on every run. It is the answer to "how would an engineering leader
+  know this is working?": sessions in flight, fixed with a PR, escalated,
+  autonomous resolution rate, median time to settle and CI retries as headline
+  numbers; a per-hour throughput chart of sessions dispatched vs. settled; and
+  a per-issue table giving each session's status, PR, elapsed time, one-line
+  trace summary and the verification transcript it ran to prove the fix.
 - **Ledger** on the `devin-pipeline-state` branch: one commit per write, so the
   dispatch and settle history is auditable.
+
+Every one of those is derived from the ledger alone, so the dashboard can be
+rebuilt at any time from a state file — nothing has to be scraped back out of
+GitHub or the Devin API.
 
 ## Running it
 
@@ -106,7 +117,11 @@ python -m devin_pipeline.pipeline.cli dispatch --issue 42
 python -m devin_pipeline.pipeline.cli monitor
 python -m devin_pipeline.pipeline.cli report --out report.md
 python -m devin_pipeline.pipeline.cli metrics --out metrics.json
+python -m devin_pipeline.pipeline.cli dashboard --out index.html
 ```
+
+`dashboard`, `report` and `metrics` read the ledger only — no API key needed,
+so a reviewer can regenerate the status page from a pulled state file.
 
 Dispatch is gated on the label wherever it is invoked from: `dispatch --issue`
 refuses an issue that is not labelled `devin-fix`, and refuses one still

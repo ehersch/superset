@@ -155,6 +155,8 @@ class Attempt:
     pr_url: str | None = None
     outcome: str | None = None
     summary: str | None = None
+    verification: str | None = None
+    blockers: str | None = None
     ci_retries: int = 0
     finished_at: str | None = None
 

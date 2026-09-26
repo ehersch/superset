@@ -356,6 +356,32 @@ def test_metrics_count_the_lifecycle(tmp_path: Path) -> None:
     assert stats["autonomous_resolution_rate"] == 1.0
 
 
+def test_dashboard_renders_the_ledger(tmp_path: Path) -> None:
+    devin = FakeDevin(
+        {
+            "status_enum": "finished",
+            "structured_output": {
+                "outcome": "fixed",
+                "pr_url": "https://github.com/ehersch/superset/pull/7",
+                "summary": "bumped po2json",
+                "verification": "npm audit --production: 0 vulnerabilities",
+            },
+        }
+    )
+    pipeline, github = build(tmp_path, devin)
+    pipeline.file_issues([finding()])
+    github.add_labels(1, [DISPATCH_LABEL])
+    pipeline.dispatch_issue(1)
+    pipeline.monitor()
+
+    html = pipeline.dashboard()
+
+    assert "<!doctype html>" in html
+    assert "https://github.com/ehersch/superset/pull/7" in html
+    assert "npm audit --production: 0 vulnerabilities" in html
+    assert "bumped po2json" in html
+
+
 @pytest.mark.parametrize("budget", [0, 2])
 def test_dispatch_respects_the_per_run_budget(tmp_path: Path, budget: int) -> None:
     devin = FakeDevin()

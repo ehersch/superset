@@ -27,6 +27,7 @@ import argparse
 import json
 import logging
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from .config import Config
@@ -65,6 +66,9 @@ def _parser() -> argparse.ArgumentParser:
 
     metrics = sub.add_parser("metrics", help="print pipeline metrics as JSON")
     metrics.add_argument("--out", help="file to write the metrics JSON to")
+
+    dash = sub.add_parser("dashboard", help="render the HTML status dashboard")
+    dash.add_argument("--out", default="dashboard.html")
     return parser
 
 
@@ -112,6 +116,30 @@ def _emit(text: str, out: str | None) -> int:
     return 0
 
 
+def _run_dashboard(pipeline: Pipeline, out: str) -> int:
+    Path(out).write_text(pipeline.dashboard(), encoding="utf-8")
+    print(f"wrote {out}")
+    return 0
+
+
+def _run_file(pipeline: Pipeline, only: list[str] | None) -> int:
+    filed = pipeline.file_issues(pipeline.detect(only))
+    print(f"filed {len(filed)} new issue(s)")
+    return 0
+
+
+def _run_monitor(pipeline: Pipeline) -> int:
+    settled = pipeline.monitor()
+    print(f"settled {len(settled)} session(s)")
+    return 0
+
+
+def _run_ci_failure(pipeline: Pipeline, pr_url: str, head_sha: str) -> int:
+    handled = pipeline.handle_ci_failure(pr_url, head_sha)
+    print("fed back to session" if handled else "not handled")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     logging.basicConfig(
@@ -125,34 +153,18 @@ def main(argv: list[str] | None = None) -> int:
         config.repo_path = Path(args.repo_path).resolve()
     pipeline = Pipeline(config)
 
-    if args.command == "detect":
-        return _run_detect(pipeline, args.only, args.as_json)
-
-    if args.command == "file":
-        filed = pipeline.file_issues(pipeline.detect(args.only))
-        print(f"filed {len(filed)} new issue(s)")
-        return 0
-
-    if args.command == "dispatch":
-        return _run_dispatch(pipeline, args.issue)
-
-    if args.command == "monitor":
-        settled = pipeline.monitor()
-        print(f"settled {len(settled)} session(s)")
-        return 0
-
-    if args.command == "ci-failure":
-        handled = pipeline.handle_ci_failure(args.pr_url, args.head_sha)
-        print("fed back to session" if handled else "not handled")
-        return 0
-
-    if args.command == "report":
-        return _emit(pipeline.report(), args.out)
-
-    if args.command == "metrics":
-        return _emit(json.dumps(pipeline.metrics(), indent=2), args.out)
-
-    return 1
+    handlers: dict[str, Callable[[], int]] = {
+        "detect": lambda: _run_detect(pipeline, args.only, args.as_json),
+        "file": lambda: _run_file(pipeline, args.only),
+        "dispatch": lambda: _run_dispatch(pipeline, args.issue),
+        "monitor": lambda: _run_monitor(pipeline),
+        "ci-failure": lambda: _run_ci_failure(pipeline, args.pr_url, args.head_sha),
+        "report": lambda: _emit(pipeline.report(), args.out),
+        "metrics": lambda: _emit(json.dumps(pipeline.metrics(), indent=2), args.out),
+        "dashboard": lambda: _run_dashboard(pipeline, args.out),
+    }
+    handler = handlers.get(args.command)
+    return handler() if handler else 1
 
 
 if __name__ == "__main__":
