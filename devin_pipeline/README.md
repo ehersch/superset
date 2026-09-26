@@ -149,6 +149,34 @@ docker run --rm -e GITHUB_TOKEN -e DEVIN_API_KEY \
   devin-pipeline dispatch --issue 15
 ```
 
+#### One-shot end-to-end run
+
+`run` is the whole loop in a single container: detect the issues, file them,
+create a Devin session per approved issue, record each session id in the
+ledger, then poll every session until it settles and write the dashboard. It
+is what the GitHub triggers do across separate events, collapsed into one
+process so the system can be demonstrated without a webhook receiver.
+
+```bash
+docker run --rm -e GITHUB_TOKEN -e DEVIN_API_KEY \
+  -e TARGET_REPO=ehersch/superset \
+  -v "$PWD:/repo:ro" -v "$PWD/.devin-pipeline:/state" \
+  devin-pipeline -v run --poll-interval 60 --timeout 3600 \
+  --dashboard-out /state/dashboard.html
+```
+
+It prints each session URL as it is created, logs every issue as it settles,
+and ends on the metrics JSON. Add `--dry-run` to walk the same path with no
+GitHub or Devin writes.
+
+```text
+INFO devin_pipeline.run: filed 3 new issue(s)
+INFO devin_pipeline.run: session devin-6a7310… -> https://app.devin.ai/sessions/6a7310…
+INFO devin_pipeline.run: dispatched 3 session(s)
+INFO devin_pipeline.run: settled issue #14
+{"issues_tracked": 10, "in_flight": 0, "fixed_with_pr": 7, …}
+```
+
 ### Configuration
 
 | Variable | Default | Meaning |

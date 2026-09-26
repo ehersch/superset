@@ -23,6 +23,7 @@ from typing import Any, Iterator
 
 import pytest
 
+from devin_pipeline.pipeline.cli import _run_loop
 from devin_pipeline.pipeline.config import (
     Config,
     DISPATCH_LABEL,
@@ -395,3 +396,32 @@ def test_dispatch_respects_the_per_run_budget(tmp_path: Path, budget: int) -> No
     pipeline.dispatch_labelled()
 
     assert len(devin.created) == budget
+
+
+def test_run_loop_dispatches_then_polls_until_nothing_is_in_flight(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    devin = FakeDevin(
+        {
+            "status_enum": "finished",
+            "structured_output": {
+                "outcome": "fixed",
+                "pr_url": "https://github.com/ehersch/superset/pull/7",
+                "summary": "bumped po2json",
+            },
+        }
+    )
+    pipeline, github = build(tmp_path, devin)
+    monkeypatch.setattr(Pipeline, "detect", lambda self, only=None: [finding()])
+    pipeline.file_issues([finding()])
+    github.add_labels(1, [DISPATCH_LABEL])
+    dashboard = tmp_path / "index.html"
+
+    assert _run_loop(pipeline, None, 0, 30, str(dashboard)) == 0, (
+        "the one-shot run should exit cleanly"
+    )
+
+    assert len(devin.created) == 1
+    assert pipeline.metrics()["in_flight"] == 0
+    assert pipeline.metrics()["fixed_with_pr"] == 1
+    assert "pull/7" in dashboard.read_text(encoding="utf-8")

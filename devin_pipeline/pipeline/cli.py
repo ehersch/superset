@@ -27,6 +27,7 @@ import argparse
 import json
 import logging
 import sys
+import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -69,6 +70,14 @@ def _parser() -> argparse.ArgumentParser:
 
     dash = sub.add_parser("dashboard", help="render the HTML status dashboard")
     dash.add_argument("--out", default="dashboard.html")
+
+    run = sub.add_parser(
+        "run", help="detect, file, dispatch and poll to completion in one process"
+    )
+    run.add_argument("--only", nargs="*", help="limit to these detectors")
+    run.add_argument("--poll-interval", type=int, default=60, help="seconds")
+    run.add_argument("--timeout", type=int, default=3600, help="seconds")
+    run.add_argument("--dashboard-out", help="write the HTML dashboard here when done")
     return parser
 
 
@@ -140,6 +149,43 @@ def _run_ci_failure(pipeline: Pipeline, pr_url: str, head_sha: str) -> int:
     return 0
 
 
+def _run_loop(
+    pipeline: Pipeline,
+    only: list[str] | None,
+    poll_interval: int,
+    timeout: int,
+    dashboard_out: str | None,
+) -> int:
+    """The whole loop in one process: detect, file, dispatch, poll, report.
+
+    The GitHub triggers run these phases as separate events; this runs them
+    back to back so the automation can be demonstrated from a single container
+    without a webhook receiver in front of it.
+    """
+    log = logging.getLogger("devin_pipeline.run")
+    filed = pipeline.file_issues(pipeline.detect(only))
+    log.info("filed %d new issue(s)", len(filed))
+
+    attempts = pipeline.dispatch_labelled()
+    for attempt in attempts:
+        log.info("session %s -> %s", attempt.session_id, attempt.session_url)
+    log.info("dispatched %d session(s)", len(attempts))
+
+    deadline = time.monotonic() + timeout
+    while pipeline.metrics()["in_flight"]:
+        if time.monotonic() >= deadline:
+            log.warning("timed out with sessions still in flight")
+            break
+        time.sleep(poll_interval)
+        for record in pipeline.monitor():
+            log.info("settled issue #%d", record.issue_number)
+
+    print(json.dumps(pipeline.metrics(), indent=2))
+    if dashboard_out:
+        _run_dashboard(pipeline, dashboard_out)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     logging.basicConfig(
@@ -162,6 +208,13 @@ def main(argv: list[str] | None = None) -> int:
         "report": lambda: _emit(pipeline.report(), args.out),
         "metrics": lambda: _emit(json.dumps(pipeline.metrics(), indent=2), args.out),
         "dashboard": lambda: _run_dashboard(pipeline, args.out),
+        "run": lambda: _run_loop(
+            pipeline,
+            args.only,
+            args.poll_interval,
+            args.timeout,
+            args.dashboard_out,
+        ),
     }
     handler = handlers.get(args.command)
     return handler() if handler else 1
