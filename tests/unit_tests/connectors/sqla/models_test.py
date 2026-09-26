@@ -2556,3 +2556,26 @@ def test_get_rendered_sql_wraps_type_error(mocker: MockerFixture) -> None:
         ExploreMixin.get_rendered_sql.__get__(datasource)(
             template_processor=template_processor
         )
+
+
+def test_sqla_table_data_includes_editors(mocker: MockerFixture) -> None:
+    """
+    Test that data property exposes the dataset editors so Explore can gate
+    the "Edit dataset" action on the dataset's own edit permission.
+    """
+    from superset.subjects.models import Subject
+
+    database = mocker.MagicMock()
+    table = SqlaTable(table_name="sales", database=database)
+    table.editors = [Subject(id=7, label="john doe", type=1)]
+
+    mocker.patch.object(SqlaTable, "columns", [])
+    mocker.patch.object(SqlaTable, "metrics", [])
+    mocker.patch(
+        "superset.connectors.sqla.models.get_extra_editor_subject_ids",
+        return_value=[42],
+    )
+
+    data = table.data
+    assert data["editors"] == [{"id": 7, "label": "john doe", "type": 1}]
+    assert data["extra_editors"] == [42]

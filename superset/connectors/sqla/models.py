@@ -111,6 +111,7 @@ from superset.models.helpers import (
 )
 from superset.models.slice import Slice
 from superset.models.sql_types.base import CurrencyType
+from superset.security.manager import get_extra_editor_subject_ids
 from superset.sql.metric_normalization import normalize_custom_metric
 from superset.sql.parse import sanitize_clause, SQLStatement, Table
 from superset.subjects.models import sqlatable_editors, Subject
@@ -1903,6 +1904,11 @@ class SqlaTable(
     @property
     def data(self) -> ExplorableData:
         data_ = super().data
+        data_["editors"] = [
+            {"id": editor.id, "label": editor.label, "type": editor.type}
+            for editor in self.editors
+        ]
+        data_["extra_editors"] = get_extra_editor_subject_ids(self)
         if self.type == "table":
             data_["granularity_sqla"] = self.granularity_sqla
             data_["time_grain_sqla"] = self.time_grain_sqla

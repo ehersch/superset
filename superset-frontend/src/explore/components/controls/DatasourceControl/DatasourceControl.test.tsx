@@ -20,6 +20,7 @@
 import type React from 'react';
 import { Route } from 'react-router-dom';
 import fetchMock from 'fetch-mock';
+import { mockUserSubjectsBootstrapData } from 'spec/helpers/mockBootstrapData';
 import {
   DatasourceType,
   JsonObject,
@@ -51,6 +52,13 @@ jest.mock('src/components/Datasource/components/DatasourceEditor', () => ({
       'Mock Editor',
     ),
 }));
+
+// The current user's subject ids (their user, roles and groups), which
+// `isUserEditorOrAdmin` intersects with the dataset's editors.
+jest.mock('src/utils/getBootstrapData', () =>
+  mockUserSubjectsBootstrapData([1]),
+);
+const mockUserSubjectId = 1;
 
 const SupersetClientGet = jest.spyOn(SupersetClient, 'get');
 
@@ -331,6 +339,104 @@ test('Edit dataset should be disabled when user is not admin', async () => {
   await userEvent.click(screen.getByTestId('datasource-menu-trigger'));
 
   expect(await screen.findByTestId('edit-dataset')).toHaveAttribute(
+    'aria-disabled',
+    'true',
+  );
+});
+
+const nonAdminUser = {
+  createdOn: '2021-04-27T18:12:38.952304',
+  email: 'gamma',
+  firstName: 'gamma',
+  isActive: true,
+  lastName: 'gamma',
+  permissions: {},
+  roles: { Gamma: [] },
+  userId: 2,
+  username: 'gamma',
+};
+
+test('Edit dataset should be enabled for a non-admin dataset editor', async () => {
+  const props = createProps({
+    user: nonAdminUser,
+    datasource: {
+      ...mockDatasource,
+      editors: [{ id: mockUserSubjectId, label: 'gamma', type: 1 }],
+    },
+  });
+
+  render(<DatasourceControl {...props} />, {
+    useRedux: true,
+    useRouter: true,
+  });
+
+  await userEvent.click(screen.getByTestId('datasource-menu-trigger'));
+
+  expect(await screen.findByTestId('edit-dataset')).not.toHaveAttribute(
+    'aria-disabled',
+    'true',
+  );
+});
+
+test('Edit dataset should be enabled for a non-admin granted editorship via extra_editors', async () => {
+  const props = createProps({
+    user: nonAdminUser,
+    datasource: {
+      ...mockDatasource,
+      editors: [],
+      extra_editors: [mockUserSubjectId],
+    },
+  });
+
+  render(<DatasourceControl {...props} />, {
+    useRedux: true,
+    useRouter: true,
+  });
+
+  await userEvent.click(screen.getByTestId('datasource-menu-trigger'));
+
+  expect(await screen.findByTestId('edit-dataset')).not.toHaveAttribute(
+    'aria-disabled',
+    'true',
+  );
+});
+
+test('Edit dataset should be disabled for a non-admin who is not a dataset editor', async () => {
+  const props = createProps({
+    user: nonAdminUser,
+    datasource: {
+      ...mockDatasource,
+      editors: [{ id: 999, label: 'someone else', type: 1 }],
+      extra_editors: [998],
+    },
+  });
+
+  render(<DatasourceControl {...props} />, {
+    useRedux: true,
+    useRouter: true,
+  });
+
+  await userEvent.click(screen.getByTestId('datasource-menu-trigger'));
+
+  expect(await screen.findByTestId('edit-dataset')).toHaveAttribute(
+    'aria-disabled',
+    'true',
+  );
+});
+
+test('Edit dataset should be enabled for an admin who is not a dataset editor', async () => {
+  const props = createProps({
+    datasource: { ...mockDatasource, editors: [] },
+  });
+
+  render(<DatasourceControl {...props} />, {
+    useRedux: true,
+    useRouter: true,
+  });
+
+  await userEvent.click(screen.getByTestId('datasource-menu-trigger'));
+
+  expect(await screen.findByTestId('edit-dataset')).not.toHaveAttribute(
     'aria-disabled',
     'true',
   );
