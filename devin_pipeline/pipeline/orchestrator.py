@@ -24,9 +24,11 @@ the others did.
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from datetime import datetime
+from hashlib import sha256
 from typing import Any, Iterable
 
 from .config import (
@@ -39,7 +41,13 @@ from .config import (
 )
 from .dashboard import render as render_dashboard
 from .detectors.base import registry
-from .devin_client import DevinClient, extract_pr_url, session_is_terminal
+from .devin_client import (
+    DevinClient,
+    extract_pr_url,
+    session_has_result,
+    session_is_terminal,
+    TERMINAL_STATUSES,
+)
 from .github_client import GitHubClient
 from .models import Attempt, Evidence, Finding, IssueRecord, Outcome, utcnow
 from .prompts import build_ci_feedback, build_prompt, STRUCTURED_OUTPUT_SCHEMA
@@ -48,6 +56,12 @@ from .state import StateStore
 logger = logging.getLogger(__name__)
 
 PR_NUMBER = re.compile(r"/pull/(\d+)")
+
+
+def _digest(structured: dict[str, Any]) -> str:
+    return sha256(
+        json.dumps(structured, sort_keys=True, default=str).encode()
+    ).hexdigest()
 
 
 def _minutes_between(start: str, end: str) -> float:
@@ -246,9 +260,14 @@ class Pipeline:
             session = self.devin.get_session(attempt.session_id)
             attempt.status = session.get("status_enum") or attempt.status
             attempt.pr_url = extract_pr_url(session) or attempt.pr_url
-            if not session_is_terminal(session):
-                continue
             structured = session.get("structured_output") or {}
+            digest = _digest(structured)
+            fresh_result = (
+                session_has_result(session) and digest != attempt.result_digest
+            )
+            if not (session_is_terminal(session) or fresh_result):
+                continue
+            attempt.result_digest = digest
             attempt.outcome = structured.get("outcome") or Outcome.NEEDS_HUMAN.value
             attempt.summary = structured.get("summary") or ""
             attempt.finished_at = utcnow()
@@ -308,10 +327,12 @@ class Pipeline:
             logger.info("no tracked session owns %s", pr_url)
             return False
         attempt = record.latest
-        if attempt.finished_at is not None:
-            # A settled session cannot act on feedback; messaging it would burn
-            # a retry and change nothing.
-            logger.info("session %s already settled", attempt.session_id)
+        if attempt.status in TERMINAL_STATUSES:
+            # A dead session cannot act on feedback; messaging it would burn a
+            # retry and change nothing. A settled-but-live session can: the
+            # pipeline settles on the reported outcome, and the session stays
+            # up afterwards holding its branch and its context.
+            logger.info("session %s is no longer live", attempt.session_id)
             return False
         if attempt.ci_retries >= self.config.max_ci_retries:
             record.escalated = True
@@ -329,6 +350,12 @@ class Pipeline:
         if not summary:
             return False
         attempt.ci_retries += 1
+        # The PR is back in the agent's hands, so the issue returns to the
+        # in-flight set and the next poll settles it on the retried outcome.
+        attempt.finished_at = None
+        attempt.outcome = None
+        self.github.remove_label(record.issue_number, DONE_LABEL)
+        self.github.add_labels(record.issue_number, [IN_PROGRESS_LABEL])
         self.state.save()
         self.devin.send_message(
             attempt.session_id,

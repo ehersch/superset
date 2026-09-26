@@ -159,6 +159,9 @@ class Attempt:
     blockers: str | None = None
     ci_retries: int = 0
     finished_at: str | None = None
+    # Digest of the structured output this attempt was settled on, so a
+    # session reopened for a CI retry is not re-settled on its stale result.
+    result_digest: str | None = None
 
 
 @dataclass

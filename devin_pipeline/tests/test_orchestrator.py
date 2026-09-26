@@ -425,3 +425,58 @@ def test_run_loop_dispatches_then_polls_until_nothing_is_in_flight(
     assert pipeline.metrics()["in_flight"] == 0
     assert pipeline.metrics()["fixed_with_pr"] == 1
     assert "pull/7" in dashboard.read_text(encoding="utf-8")
+
+
+def test_monitor_settles_a_session_that_reported_a_result_while_still_live(
+    tmp_path: Path,
+) -> None:
+    # Devin keeps a session `working` after it finishes its task, so the
+    # structured output — not the status — is the completion signal.
+    devin = FakeDevin(
+        {
+            "status_enum": "working",
+            "structured_output": {
+                "outcome": "fixed",
+                "pr_url": "https://github.com/ehersch/superset/pull/9",
+                "summary": "bumped po2json",
+            },
+        }
+    )
+    pipeline, github = build(tmp_path, devin)
+    pipeline.file_issues([finding()])
+    github.add_labels(1, [DISPATCH_LABEL])
+    pipeline.dispatch_issue(1)
+
+    assert len(pipeline.monitor()) == 1
+    assert DONE_LABEL in github.labels[1]
+    # ... and polling again does not re-settle the same result.
+    assert pipeline.monitor() == []
+
+
+def test_ci_failure_reopens_a_settled_but_live_session(tmp_path: Path) -> None:
+    devin = FakeDevin(
+        {
+            "status_enum": "working",
+            "structured_output": {
+                "outcome": "fixed",
+                "pr_url": "https://github.com/ehersch/superset/pull/9",
+                "summary": "bumped po2json",
+            },
+        }
+    )
+    pipeline, github = build(tmp_path, devin)
+    pipeline.file_issues([finding()])
+    github.add_labels(1, [DISPATCH_LABEL])
+    pipeline.dispatch_issue(1)
+    pipeline.monitor()
+    github.check_summary = "frontend-build failed"
+
+    handled = pipeline.handle_ci_failure(
+        "https://github.com/ehersch/superset/pull/9", "abc123"
+    )
+
+    assert handled
+    assert devin.messages, "the owning session should receive the failures"
+    assert DONE_LABEL not in github.labels[1]
+    assert IN_PROGRESS_LABEL in github.labels[1]
+    assert pipeline.metrics()["in_flight"] == 1

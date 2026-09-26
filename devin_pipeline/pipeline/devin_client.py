@@ -162,6 +162,18 @@ def session_is_terminal(session: dict[str, Any]) -> bool:
     return (session.get("status_enum") or "") in TERMINAL_STATUSES
 
 
+def session_has_result(session: dict[str, Any]) -> bool:
+    """Whether the session has reported the outcome the prompt asked for.
+
+    A session that finishes its task keeps its machine alive and stays
+    ``working`` until it is idled or messaged, so waiting for a terminal
+    status would leave every successful remediation in flight for hours.
+    The structured output is the completion signal; the status is not.
+    """
+    structured = session.get("structured_output")
+    return isinstance(structured, dict) and bool(structured.get("outcome"))
+
+
 def extract_pr_url(session: dict[str, Any]) -> str | None:
     """Best-effort PR discovery.
 
