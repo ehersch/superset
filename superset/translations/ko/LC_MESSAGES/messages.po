@@ -237,7 +237,7 @@ msgstr "\"%s\"이(가) 시스템 기본 테마로 설정되었습니다"
 
 #, fuzzy, no-python-format
 msgid "% calculation"
-msgstr ""
+msgstr "시각화 유형 선택"
 
 #, python-format
 msgid "% of"
@@ -259,7 +259,7 @@ msgstr ""
 # fa, ja, lv, mi, ru, sk, sl, sr, sr_Latn, tr, uk]
 #, fuzzy, no-python-format
 msgid "% of parent"
-msgstr ""
+msgstr "상위 항목의 %"
 
 #, python-format
 msgid "% of row total"
@@ -267,7 +267,7 @@ msgstr ""
 
 #, fuzzy, no-python-format
 msgid "% of total"
-msgstr ""
+msgstr "컬럼 보기"
 
 #, python-format
 msgid "%(alertType)s \"%(alertName)s\" triggered successfully"
@@ -411,7 +411,7 @@ msgstr ""
 
 #, fuzzy, python-format
 msgid "%s PASSWORD"
-msgstr ""
+msgstr "%s 비밀번호"
 
 # Machine-translated via backfill_po.py (claude-sonnet-4-6) [refs: de, sr,
 # sr_Latn]
@@ -3121,7 +3121,7 @@ msgstr "주석"
 
 #, fuzzy, python-format
 msgid "Annotation Layer %s"
-msgstr ""
+msgstr "주석 레이어 %s"
 
 msgid "Annotation Layers"
 msgstr "주석 레이어"
@@ -5050,7 +5050,7 @@ msgstr "차트 %(id)s를 찾을 수 없습니다"
 
 #, fuzzy, python-format
 msgid "Chart Data: %s"
-msgstr ""
+msgstr "차트 데이터: %s"
 
 # Machine-translated via backfill_po.py (claude-sonnet-4-6) [refs: ca, cs, de,
 # es, fa, fi, fr, it, ja, lv, mi, nl, pl, pt_BR, ro, ru, sk, sl, sr, sr_Latn,
@@ -5533,7 +5533,7 @@ msgstr "지우기"
 
 #, fuzzy, python-format
 msgid "Clear %s filter"
-msgstr ""
+msgstr "%s 필터 지우기"
 
 #, fuzzy
 msgid "Clear Sort"
@@ -5663,7 +5663,7 @@ msgstr "클릭하여 제목 수정하기"
 
 #, fuzzy, python-format
 msgid "Click to edit %s."
-msgstr ""
+msgstr "클릭하여 %s 수정하기."
 
 #, fuzzy
 msgid "Click to edit chart."
@@ -6063,7 +6063,7 @@ msgstr "칼럼"
 
 #, fuzzy, python-format
 msgid "Columns (%s)"
-msgstr ""
+msgstr "컬럼 (%s)"
 
 #, fuzzy
 msgid "Columns (horizontal layout)"
@@ -6761,7 +6761,7 @@ msgstr "데이터베이스 드라이버를 로드할 수 없습니다"
 
 #, fuzzy, python-format
 msgid "Could not load database driver for: %(engine)s"
-msgstr ""
+msgstr "데이터베이스 드라이버를 로드할 수 없습니다: %(engine)s"
 
 msgid ""
 "Could not load metadata for this configuration; showing the default form."
@@ -6904,7 +6904,7 @@ msgstr "생성자"
 
 #, fuzzy, python-format
 msgid "Created by: %s"
-msgstr ""
+msgstr "생성자: %s"
 
 #, python-format
 msgid "Created from version: %s"
@@ -7334,7 +7334,7 @@ msgstr "대시보드"
 
 #, fuzzy, python-format
 msgid "Dashboard %(dashboard_id)s not found"
-msgstr ""
+msgstr "대시보드 %(dashboard_id)s이(가) 존재하지 않습니다"
 
 #, fuzzy
 msgid "Dashboard Filter"
@@ -7460,7 +7460,7 @@ msgstr "대시보드"
 
 #, fuzzy, python-format
 msgid "Dashboard updated %s"
-msgstr ""
+msgstr "대시보드 업데이트됨: %s"
 
 #, fuzzy
 msgid "Dashboard usage"
@@ -7710,7 +7710,7 @@ msgstr "데이터베이스"
 
 #, fuzzy, python-format
 msgid "Dataset %(table)s already exists"
-msgstr ""
+msgstr "데이터셋 %(table)s 은 이미 존재합니다"
 
 #, fuzzy
 msgid "Dataset Name"
@@ -7922,7 +7922,7 @@ msgstr "일 (freq=D)"
 
 #, fuzzy, python-format
 msgid "Days %s"
-msgstr ""
+msgstr "%s일"
 
 # Machine-translated via backfill_po.py (claude-sonnet-4-6) [refs: ar, ca, cs,
 # de, es, fa, fr, ja, lv, mi, nl, pl, pt_BR, ro, ru, sk, sl, sr, sr_Latn, tr,
@@ -8188,7 +8188,7 @@ msgstr "삭제"
 
 #, fuzzy, python-format
 msgid "Delete %s"
-msgstr ""
+msgstr "%s 삭제"
 
 # Machine-corrected via repair_i18n.py (claude-sonnet-4-6) [restored
 # placeholder]
@@ -8393,7 +8393,7 @@ msgstr[0] "%(num)d개의 테마가 삭제되었습니다"
 
 #, fuzzy, python-format
 msgid "Deleted %s"
-msgstr ""
+msgstr "%s 삭제됨"
 
 #, fuzzy, python-format
 msgid "Deleted %s item(s)"
@@ -8401,31 +8401,31 @@ msgstr ""
 
 #, fuzzy, python-format
 msgid "Deleted group: %s"
-msgstr ""
+msgstr "그룹 삭제됨: %s"
 
 #, fuzzy, python-format
 msgid "Deleted groups: %s"
-msgstr ""
+msgstr "그룹 삭제됨: %s"
 
 #, fuzzy, python-format
 msgid "Deleted role: %s"
-msgstr ""
+msgstr "역할 삭제됨: %s"
 
 #, fuzzy, python-format
 msgid "Deleted roles: %s"
-msgstr ""
+msgstr "역할 삭제됨: %s"
 
 #, fuzzy, python-format
 msgid "Deleted user registration for user: %s"
-msgstr ""
+msgstr "사용자 등록 삭제됨: %s"
 
 #, fuzzy, python-format
 msgid "Deleted user: %s"
-msgstr ""
+msgstr "사용자 삭제됨: %s"
 
 #, fuzzy, python-format
 msgid "Deleted users: %s"
-msgstr ""
+msgstr "사용자 삭제됨: %s"
 
 # Machine-corrected via repair_i18n.py (claude-sonnet-4-6) [restored
 # placeholder]
@@ -9356,7 +9356,7 @@ msgstr ""
 
 #, fuzzy
 msgid "ERROR"
-msgstr ""
+msgstr "에러"
 
 #, python-format
 msgid "ERROR: %s"
@@ -9402,7 +9402,7 @@ msgstr "편집"
 
 #, fuzzy, python-format
 msgid "Edit %s"
-msgstr ""
+msgstr "%s 수정"
 
 #, fuzzy, python-format
 msgid "Edit %s in modal"
@@ -9913,7 +9913,7 @@ msgstr "차트 유형"
 
 #, fuzzy, python-format
 msgid "Ends with (ILIKE %x)"
-msgstr ""
+msgstr "차트 유형"
 
 # Machine-translated via backfill_po.py (claude-sonnet-4-6) [refs: ar, ca, cs,
 # de, es, fa, fr, ja, lv, mi, nl, pl, pt_BR, ro, ru, sk, sl, sr, sr_Latn, tr,
@@ -10076,7 +10076,7 @@ msgstr "같음"
 
 #, fuzzy
 msgid "Error"
-msgstr ""
+msgstr "에러"
 
 #, fuzzy
 msgid "Error Fetching Tagged Objects"
@@ -12170,7 +12170,7 @@ msgstr "시"
 
 #, fuzzy, python-format
 msgid "Hours %s"
-msgstr ""
+msgstr "%s시간"
 
 # Machine-translated via backfill_po.py (claude-sonnet-4-6) [refs: ar, ca, cs,
 # de, es, fa, fr, ja, lv, mi, nl, pl, pt_BR, ro, ru, sk, sl, sr, sr_Latn, tr,
@@ -13324,7 +13324,7 @@ msgstr "마지막 업데이트 %s"
 
 #, fuzzy, python-format
 msgid "Last Updated %s by %s"
-msgstr ""
+msgstr "마지막 수정: %s, 수정자: %s"
 
 #, fuzzy
 msgid "Last Used"
@@ -13377,7 +13377,7 @@ msgstr "마지막 실행"
 
 #, fuzzy, python-format
 msgid "Last updated %s ago"
-msgstr ""
+msgstr "마지막 수정: %s 전"
 
 #, fuzzy
 msgid "Last week"
@@ -14700,7 +14700,7 @@ msgstr "메트릭"
 
 #, fuzzy, python-format
 msgid "Metrics (%s)"
-msgstr ""
+msgstr "메트릭 (%s)"
 
 # Machine-translated via backfill_po.py (claude-sonnet-4-6) [refs: de, sr,
 # sr_Latn]
@@ -14893,7 +14893,7 @@ msgstr "분"
 
 #, fuzzy, python-format
 msgid "Minutes %s"
-msgstr ""
+msgstr "%s분"
 
 #, fuzzy, python-format
 msgid "Missing %s"
@@ -14926,7 +14926,7 @@ msgstr ""
 
 #, fuzzy, python-format
 msgid "Modified %s"
-msgstr ""
+msgstr "수정됨: %s"
 
 # Machine-translated via backfill_po.py (claude-sonnet-4-6) [refs: ca, cs, de,
 # es, fr, ja, lv, mi, ro, ru, sk, sr, sr_Latn, tr, uk]
@@ -14940,7 +14940,7 @@ msgstr "수정됨"
 
 #, fuzzy, python-format
 msgid "Modified by: %s"
-msgstr ""
+msgstr "마지막 수정자: %s"
 
 #, fuzzy, python-format
 msgid "Modified from \"%s\" template"
@@ -14958,7 +14958,7 @@ msgstr "달"
 
 #, fuzzy, python-format
 msgid "Months %s"
-msgstr ""
+msgstr "%s개월"
 
 #, fuzzy
 msgid "More"
@@ -17744,7 +17744,7 @@ msgstr "분기"
 
 #, fuzzy, python-format
 msgid "Quarters %s"
-msgstr ""
+msgstr "%s분기"
 
 #, fuzzy
 msgid "Queries"
@@ -18695,7 +18695,7 @@ msgstr "결과"
 
 #, fuzzy, python-format
 msgid "Results %s"
-msgstr ""
+msgstr "결과 %s"
 
 # Machine-translated via backfill_po.py (claude-sonnet-4-6) [refs: ar, ca, cs,
 # de, es, fa, fr, ja, lv, mi, nl, pl, pt_BR, ro, ru, sk, sl, sr, sr_Latn, tr,
@@ -19353,7 +19353,7 @@ msgstr "다른 이름으로 저장"
 
 #, fuzzy, python-format
 msgid "Save as %s"
-msgstr ""
+msgstr "다른 이름으로 저장: %s"
 
 #, fuzzy
 msgid "Save as Dataset"
@@ -19765,7 +19765,7 @@ msgstr "보조 Y축 제목"
 
 #, fuzzy, python-format
 msgid "Seconds %s"
-msgstr ""
+msgstr "%s초"
 
 msgid "Secure extra"
 msgstr "보안"
@@ -24364,7 +24364,7 @@ msgstr "관련된 알람이나 리포트가 있습니다"
 
 #, fuzzy, python-format
 msgid "There are associated alerts or reports: %(report_names)s"
-msgstr ""
+msgstr "관련된 알람이나 리포트가 있습니다: %(report_names)s"
 
 # Machine-translated via backfill_po.py (claude-sonnet-4-6) [refs: ar, ca, cs,
 # de, es, fa, fr, ja, lv, mi, nl, pl, pt_BR, ro, ru, sk, sl, sr, sr_Latn, tr,
@@ -26637,7 +26637,7 @@ msgstr "알 수 없는 상태"
 
 #, fuzzy, python-format
 msgid "Unknown column used in orderby: %(col)s"
-msgstr ""
+msgstr "알 수 없는 칼럼이 orderby에 사용되었습니다: %(col)s"
 
 msgid "Unknown error"
 msgstr "알 수 없는 에러"
@@ -26885,7 +26885,7 @@ msgstr "관리"
 
 #, fuzzy, python-format
 msgid "Use %s to open in a new tab."
-msgstr ""
+msgstr "새 탭에서 열려면 %s을(를) 사용하세요."
 
 #, fuzzy
 msgid "Use Area Proportions"
@@ -27799,7 +27799,7 @@ msgstr "주간 계절성"
 
 #, fuzzy, python-format
 msgid "Weeks %s"
-msgstr ""
+msgstr "%s주"
 
 # Machine-translated via backfill_po.py (claude-sonnet-4-6) [refs: ar, ca, cs,
 # de, es, fa, fr, ja, lv, mi, nl, pt_BR, ro, ru, sk, sl, sr, sr_Latn, tr, uk]
@@ -28641,7 +28641,7 @@ msgstr "연간 계절성"
 
 #, fuzzy, python-format
 msgid "Years %s"
-msgstr ""
+msgstr "%s년"
 
 # Machine-translated via backfill_po.py (claude-sonnet-4-6) [refs: ar, ca, cs,
 # de, es, fa, fr, ja, lv, mi, nl, pl, pt_BR, ro, ru, sk, sl, sr, sr_Latn, tr,
