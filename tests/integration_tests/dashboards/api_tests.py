@@ -2265,7 +2265,9 @@ class TestDashboardApi(ApiEditorsTestCaseMixin, InsertChartMixin, SupersetTestCa
         rv = self.client.post(uri, json=dashboard_data)
         assert rv.status_code == 422
         response = json.loads(rv.data.decode("utf-8"))
-        expected_response = {"message": {"slug": ["Must be unique"]}}
+        expected_response = {
+            "message": {"slug": ["A dashboard with this slug already exists"]}
+        }
         assert response == expected_response
 
         # Check for slug max size
@@ -3179,7 +3181,9 @@ class TestDashboardApi(ApiEditorsTestCaseMixin, InsertChartMixin, SupersetTestCa
         rv = self.client.put(uri, json=dashboard_data)
         assert rv.status_code == 422
         response = json.loads(rv.data.decode("utf-8"))
-        expected_response = {"message": {"slug": ["Must be unique"]}}
+        expected_response = {
+            "message": {"slug": ["A dashboard with this slug already exists"]}
+        }
         assert response == expected_response
 
         db.session.delete(dashboard1)
