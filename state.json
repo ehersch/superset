@@ -1,6 +1,256 @@
 {
   "version": 1,
   "issues": {
+    "13": {
+      "issue_number": 13,
+      "fingerprint": "3e376e5a5466a92c",
+      "detector": "upstream_mirror",
+      "wave": "B",
+      "title": "fix(tests): six restore-version command unit tests fail on master",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-38924e6155b44b3da4c459a1dc17267e",
+          "session_url": "https://app.devin.ai/sessions/38924e6155b44b3da4c459a1dc17267e",
+          "created_at": "2026-09-26T22:37:57+00:00",
+          "status": "blocked",
+          "pr_url": null,
+          "outcome": "not_reproducible",
+          "summary": "On a clean checkout of ehersch/superset master (5b9733fd60), the restore-version command unit tests all pass; no code changes were made and no PR was opened.",
+          "verification": null,
+          "blockers": null,
+          "ci_retries": 0,
+          "finished_at": "2026-09-26T22:43:11+00:00",
+          "result_digest": null
+        }
+      ],
+      "escalated": true
+    },
+    "14": {
+      "issue_number": 14,
+      "fingerprint": "54046286cfd25406",
+      "detector": "upstream_mirror",
+      "wave": "C",
+      "title": "fix(reports): text reports render -0.00 for negative values that round to zero",
+      "severity": "moderate",
+      "attempts": [
+        {
+          "session_id": "devin-6a7310d06b9e4475a79effcb52f4e0ef",
+          "session_url": "https://app.devin.ai/sessions/6a7310d06b9e4475a79effcb52f4e0ef",
+          "created_at": "2026-09-26T22:38:03+00:00",
+          "status": "working",
+          "pr_url": "https://github.com/ehersch/superset/pull/21",
+          "outcome": "fixed",
+          "summary": "format_d3 formatted abs(value) then re-attached the sign, so any negative value rounding to zero at the requested precision rendered as -0.00 in report text tables. Ported d3-format's guard (locale.js: drop the sign when the formatted magnitude is zero and the sign mode is not '+') plus a parametrized unit test covering both rounding-to-zero and sign-preserving cases.",
+          "verification": "1) Repro before fix: `.venv/bin/python -c \"from superset.utils.number_format import format_number_with_config as f; print(f(',.2f',None,-0.001))\"` -> '-0.00'.\n2) New test on unpatched source (git stash of superset/utils/number_format.py): `.venv/bin/python -m pytest tests/unit_tests/utils/number_format_test.py -q -k negative_value_rounding` -> 6 failed, 5 passed.\n3) After fix: same command -> 11 passed; full file `pytest tests/unit_tests/utils/number_format_test.py -q` -> 104 passed.\n4) Criterion 1 (negative rounding to zero has no sign) and 2 (non-zero keeps sign) verified by `.venv/bin/python -c` matrix: ',.2f' -0.001 -> '0.00'; '.2f' -0.004 -> '0.00'; '$,.2f' -0.001 -> '$0.00'; '(,.2f' -0.001 -> '0.00'; '.1%' -0.0001 -> '0.0%'; 'd' -0.4 -> '0'; ',.2f' -0.005 -> '-0.01'; ',.2f' -1.234 -> '-1.23'; '$,.2f' -1234.5 -> '-$1,234.50'; '(,.2f' -1.234 -> '(1.23)'; '+.2f' -0.001 -> '-0.00' (d3 parity).\n5) Regression: `.venv/bin/python -m pytest tests/unit_tests/reports tests/unit_tests/charts -q` -> 589 passed, 2 xfailed.\n6) `pre-commit run` on the staged diff -> all hooks Passed (mypy, ruff, ruff-format, pylint).",
+          "blockers": "",
+          "ci_retries": 0,
+          "finished_at": "2026-09-26T22:55:27+00:00",
+          "result_digest": "c08257521f60ebb653c044c30dd6f688b9f1f366106706975b81b619ada3f75c"
+        }
+      ],
+      "escalated": false
+    },
+    "8": {
+      "issue_number": 8,
+      "fingerprint": "045eabfb338004a2",
+      "detector": "npm_audit",
+      "wave": "A",
+      "title": "security(frontend): upgrade to po2json@0.3.0 to clear 3 advisory chain package(s)",
+      "severity": "critical",
+      "attempts": [
+        {
+          "session_id": "devin-1c87d53349484ba6923cb4e0eeea8e45",
+          "session_url": "https://app.devin.ai/sessions/1c87d53349484ba6923cb4e0eeea8e45",
+          "created_at": "2026-09-26T22:38:07+00:00",
+          "status": "working",
+          "pr_url": "https://github.com/ehersch/superset/pull/22",
+          "outcome": "fixed",
+          "summary": "Upgraded superset-frontend devDependency po2json from ^0.4.5 to ^1.0.0-beta-3 (drops the nomnom -> underscore chain; audits with 0 vulnerabilities) and renamed the format flag in scripts/po2json.sh from `jed1.x` to `jed`, which is the same format under its new name. The audit-suggested target po2json@0.3.0 was rejected because it is a downgrade that still depends on nomnom/underscore and adds a critical lodash@2.4.1 advisory chain, violating the no-new-advisory criterion.",
+          "verification": "Repro (before): `cd superset-frontend && npm audit --package-lock-only --json | jq '.vulnerabilities | with_entries(select((.value.fixAvailable|type)==\"object\" and .value.fixAvailable.name == \"po2json\"))'` -> nomnom, po2json, underscore (all critical, fixAvailable po2json@0.3.0). Scratch audit of po2json@0.3.0 -> 4 vulns (lodash critical + underscore high); po2json@1.0.0-beta-3 -> 0 vulns.\n\n1. After change, same audit jq -> {}. Metadata before {moderate:3,high:14,critical:3,total:20}, after {moderate:3,high:14,critical:0,total:17}; removed [nomnom,po2json,underscore], added [].\n2. Same comparison: no new advisories added.\n3. `npm ci && npm run build` -> `webpack 5.111.0 compiled with 4 warnings`, exit 0. `npm run build-translation` -> exit 0; for all 30 messages.po files, output of 1.0.0-beta-3 `--format jed` is byte-identical (cmp) to 0.4.5 `--format jed1.x`.\n4. `npx cross-env NODE_ENV=test jest packages/superset-core/src/translation src/preamble.test.ts` -> Test Suites: 3 passed, Tests: 32 passed.\n`pre-commit run` on staged diff -> all hooks Passed. CI on PR #22 pending at time of writing.",
+          "blockers": "",
+          "ci_retries": 0,
+          "finished_at": "2026-09-26T22:55:29+00:00",
+          "result_digest": "e69625c39e6c5822f99a17143f75093591914f0236ae3ea4b29149be0e1edd66"
+        }
+      ],
+      "escalated": false
+    },
+    "15": {
+      "issue_number": 15,
+      "fingerprint": "8a45b11ecabd3c81",
+      "detector": "upstream_mirror",
+      "wave": "C",
+      "title": "fix(explore): 'Edit dataset' is disabled for non-Admin users who can edit the dataset",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-604f531e415c4bf0a24c6e0892478449",
+          "session_url": "https://app.devin.ai/sessions/604f531e415c4bf0a24c6e0892478449",
+          "created_at": "2026-09-26T22:43:51+00:00",
+          "status": "working",
+          "pr_url": "https://github.com/ehersch/superset/pull/29",
+          "outcome": "fixed",
+          "summary": "SqlaTable.data (the Explore dataset payload) never emitted `editors`, so DatasourceControl's gate collapsed to Admin-only; it now emits `editors` ([{id,label,type}]) and `extra_editors`, and DatasourceControl uses the shared `isUserEditorOrAdmin` helper. Added a pytest for the payload and Jest tests for non-Admin editor (enabled), extra_editors editor (enabled), non-editor (disabled) and Admin non-editor (enabled).",
+          "verification": "CI still running. Local: reproduction \u2014 Python snippet `'editors' in SqlaTable(...).data` -> False before fix; `npm run test -- --testPathPatterns 'explore.*[Dd]ataset'` matches 0 files (issue's pattern doesn't match DatasourceControl path). After fix: `.venv/bin/pytest tests/unit_tests/connectors/sqla/models_test.py -q` -> 105 passed; `npx jest src/explore/components/controls/DatasourceControl/DatasourceControl.test.tsx` -> 26 passed (incl. 4 new tests); `npx oxlint --config oxlint.json src/explore/components/controls/DatasourceControl/` -> exit 0; `pre-commit run` on staged diff -> all hooks pass except mypy (identical 3342 pre-existing errors with and without change; local env on py3.10) and frontend tscw (TS6305 unbuilt packages, environmental).",
+          "blockers": "",
+          "ci_retries": 0,
+          "finished_at": "2026-09-26T23:06:37+00:00",
+          "result_digest": "3dd8a1c493c2c1fee173b4684e8a60ca9cb1dc934384a20bceb098e5029d28ff"
+        }
+      ],
+      "escalated": false
+    },
+    "2": {
+      "issue_number": 2,
+      "fingerprint": "76708c8fe96c35b8",
+      "detector": "i18n_placeholders",
+      "wave": "B",
+      "title": "i18n(ko): 114 translations have placeholders that do not match the source",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-63c46d78f5f24192b18c2a84f9be9c1c",
+          "session_url": "https://app.devin.ai/sessions/63c46d78f5f24192b18c2a84f9be9c1c",
+          "created_at": "2026-09-26T22:44:53+00:00",
+          "status": "working",
+          "pr_url": "https://github.com/ehersch/superset/pull/23",
+          "outcome": "fixed",
+          "summary": "Cleared 114 Korean translations with mismatched placeholders and four more that prevented Babel compilation. Rebuilt the Korean MO catalog and preserved all original msgids so cleared entries fall back to English.",
+          "verification": "Baseline: python -m devin_pipeline.pipeline.cli --dry-run detect --only i18n_placeholders -> ModuleNotFoundError on master; PYTHONPATH=/home/ubuntu/repos/superset-pipeline python -m devin_pipeline.pipeline.cli --dry-run detect --only i18n_placeholders -> ko: 114. After fix: same PYTHONPATH command -> no ko finding; PYTHONPATH=/home/ubuntu/repos/superset-pipeline python -c '...scan_catalog(...)...' -> ko mismatches: 0. /home/ubuntu/ko-tools/bin/pybabel compile -i superset/translations/ko/LC_MESSAGES/messages.po -o superset/translations/ko/LC_MESSAGES/messages.mo -l ko --statistics -> success (4698 of 5460 translated). /home/ubuntu/ko-tools/bin/python -c '...pofile.read_po(...git show origin/master...)...' -> all 5461 msgids unchanged. /home/ubuntu/ko-tools/bin/python -c '...gettext.GNUTranslations(...)...' -> MO readable (18378 bytes), cleared entry returns English source. git diff --check -> passed; /home/ubuntu/ko-tools/bin/pre-commit run -> passed on staged files.",
+          "blockers": "",
+          "ci_retries": 0,
+          "finished_at": "2026-09-26T22:55:32+00:00",
+          "result_digest": "206b7612ef37c02b2e5a289ef01557dba5a6a7589da8bbd16897c2958faa5c02"
+        }
+      ],
+      "escalated": false
+    },
+    "3": {
+      "issue_number": 3,
+      "fingerprint": "83c9324640e7640f",
+      "detector": "i18n_placeholders",
+      "wave": "B",
+      "title": "i18n(pl): 95 translations have placeholders that do not match the source",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-14ae14f61bc444b1a247ced26a491d63",
+          "session_url": "https://app.devin.ai/sessions/14ae14f61bc444b1a247ced26a491d63",
+          "created_at": "2026-09-26T22:44:56+00:00",
+          "status": "working",
+          "pr_url": "https://github.com/ehersch/superset/pull/27",
+          "outcome": "fixed",
+          "summary": "Retranslated the 95 pl catalog entries whose %s/%(name)s placeholder set diverged from the English msgid (mostly stale fuzzy matches), dropping the fuzzy flag and clearing one entry ('%s ENCRYPTED EXTRA') that could not be repaired faithfully. Only msgstr lines changed; messages.mo is gitignored so it was regenerated locally to confirm the catalog compiles.",
+          "verification": "Repro (before): PYTHONPATH=~/pipeline python -m devin_pipeline.pipeline.cli --dry-run detect --only i18n_placeholders -> '[high] 83c9324640e7640f i18n(pl): 95 translations have placeholders that do not match the source'. After fix, same command lists ko/nl/ar/pt_BR/fa/zh_TW only; scan_catalog('superset/translations/pl/LC_MESSAGES/messages.po') -> 0 mismatches. `pybabel compile -d superset/translations -l pl` -> messages.mo written (265694 bytes); gettext lookup of '%s Selected (%s)' % (3,'x') -> '3 Wybrano (x)'. `git diff | grep -c '^-msgid'` -> 0 (no msgid modified). `pre-commit run` on staged diff -> passed. CI on PR #27 pending.",
+          "blockers": "",
+          "ci_retries": 0,
+          "finished_at": "2026-09-26T22:55:33+00:00",
+          "result_digest": "5269b14c5d19e64f488ef7bf0825edec3b7fc61ac8dad0abc1ea5044e58fcd94"
+        }
+      ],
+      "escalated": false
+    },
+    "4": {
+      "issue_number": 4,
+      "fingerprint": "f308b0163bec0ec7",
+      "detector": "i18n_placeholders",
+      "wave": "B",
+      "title": "i18n(nl): 89 translations have placeholders that do not match the source",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-e8b4dcdb7ed6414687953b12bed0c703",
+          "session_url": "https://app.devin.ai/sessions/e8b4dcdb7ed6414687953b12bed0c703",
+          "created_at": "2026-09-26T22:44:59+00:00",
+          "status": "working",
+          "pr_url": "https://github.com/ehersch/superset/pull/26",
+          "outcome": "fixed",
+          "summary": "Rewrote the 89 nl msgstr entries whose placeholder set differed from the English msgid (plus 11 plural/%d/%x mismatches babel flags) so each carries the exact placeholders of its source; none needed clearing. Regenerated messages.mo locally (gitignored).",
+          "verification": "PYTHONPATH=/home/ubuntu/pipeline python3 -m devin_pipeline.pipeline.cli --dry-run detect --only i18n_placeholders -> before: '[high] f308b0163bec0ec7 i18n(nl): 89 translations...'; after: no nl finding, scan_catalog(nl) == 0. pybabel compile -d superset/translations -l nl -f -> messages.mo written (78 errors on master -> 3 no-python-format false positives). git diff | grep -c '^[-+]msgid' -> 0. pre-commit run on staged diff -> Passed.",
+          "blockers": "",
+          "ci_retries": 0,
+          "finished_at": "2026-09-26T22:55:35+00:00",
+          "result_digest": "c6dfd516238f3092bf55d684c74f51eeb1827d1acca5dac122d3b74c82605202"
+        }
+      ],
+      "escalated": false
+    },
+    "5": {
+      "issue_number": 5,
+      "fingerprint": "6574e6299a2c6431",
+      "detector": "i18n_placeholders",
+      "wave": "B",
+      "title": "i18n(ar): 87 translations have placeholders that do not match the source",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-f0c046b5aba04a9b8bd8e82b742fce63",
+          "session_url": "https://app.devin.ai/sessions/f0c046b5aba04a9b8bd8e82b742fce63",
+          "created_at": "2026-09-26T22:45:02+00:00",
+          "status": "working",
+          "pr_url": "https://github.com/ehersch/superset/pull/28",
+          "outcome": null,
+          "summary": null,
+          "verification": null,
+          "blockers": null,
+          "ci_retries": 0,
+          "finished_at": null,
+          "result_digest": null
+        }
+      ],
+      "escalated": false
+    },
+    "6": {
+      "issue_number": 6,
+      "fingerprint": "84a0128eab35e9c4",
+      "detector": "i18n_placeholders",
+      "wave": "B",
+      "title": "i18n(pt_BR): 83 translations have placeholders that do not match the source",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-10fe5a92b2e341f28ea73ba8edd4d6de",
+          "session_url": "https://app.devin.ai/sessions/10fe5a92b2e341f28ea73ba8edd4d6de",
+          "created_at": "2026-09-26T22:45:05+00:00",
+          "status": "working",
+          "pr_url": "https://github.com/ehersch/superset/pull/24",
+          "outcome": "fixed",
+          "summary": "Re-translated all 83 pt_BR msgstr entries whose placeholder signature disagreed with the English msgid so named/positional placeholders match exactly (mismatched leftover translations replaced with faithful ones; typos like %(url) s and %s(tab_ids) fixed). Only msgstr lines changed; messages.mo is gitignored in this repo so it was regenerated locally rather than committed.",
+          "verification": "Detector is not on master; extracted from origin/devin/1790462022-devin-remediation-pipeline via `git archive ... devin_pipeline | tar -x -C /home/ubuntu/pipeline`.\n\nBefore: `python3 -m devin_pipeline.pipeline.cli --dry-run --repo-path /home/ubuntu/repos/superset detect --only i18n_placeholders` -> `[high] 84a0128eab35e9c4 i18n(pt_BR): 83 translations have placeholders that do not match the source`.\nAfter same command: pt_BR absent from findings (ko/pl/nl/ar/fa/zh_TW remain, 10 findings total vs 11 before). scan_catalog(pt_BR) returns [].\n\n`git diff master -- superset/translations/pt_BR/LC_MESSAGES/messages.po | grep -E '^[-+]msgid'` -> empty (no msgid modified).\n\n.mo regenerated: `python3 -c \"from babel.messages.pofile import read_po; from babel.messages.mofile import write_mo; ...\"` -> 'mo written 5460', messages.mo 278467 bytes (file is gitignored per .gitignore:118).\n\n`pre-commit run --files superset/translations/pt_BR/LC_MESSAGES/messages.po` -> end-of-file/trailing-whitespace Passed, rest skipped. CI on PR #24 pending.",
+          "blockers": "",
+          "ci_retries": 0,
+          "finished_at": "2026-09-26T22:55:37+00:00",
+          "result_digest": "8220d23e58210b0555aba0316c31fac9375dba0de75f3b82a63d9e657a79e91c"
+        }
+      ],
+      "escalated": false
+    },
+    "7": {
+      "issue_number": 7,
+      "fingerprint": "865c52fb5df2ad51",
+      "detector": "i18n_placeholders",
+      "wave": "B",
+      "title": "i18n(fa): 81 translations have placeholders that do not match the source",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-bf1c6ac73e6f4163a33f2be9f130d2cc",
+          "session_url": "https://app.devin.ai/sessions/bf1c6ac73e6f4163a33f2be9f130d2cc",
+          "created_at": "2026-09-26T22:45:08+00:00",
+          "status": "working",
+          "pr_url": "https://github.com/ehersch/superset/pull/25",
+          "outcome": "fixed",
+          "summary": "Repaired 67 and cleared 22 Persian (fa) msgstr entries in superset/translations/fa/LC_MESSAGES/messages.po whose %s/%(name)s placeholders diverged from the English source, so backend interpolation no longer raises and the frontend never renders raw templates. Only msgstr lines changed; messages.mo regenerated locally via pybabel (it is gitignored, generated at build time).",
+          "verification": "The issue's `python -m devin_pipeline.pipeline.cli --dry-run detect --only i18n_placeholders` could not be run: no `devin_pipeline` module exists in the repo (master) or on the machine. Equivalent check used instead.\n\n1) Placeholder multiset comparison (polib script comparing msgid<->msgstr and msgid_plural<->msgstr[1] for %s/%d/%f/%r, %(name)s, {}): before = 93 mismatches (incl. plural forms; issue counted 81), after = `MISMATCHES 0`.\n2) `pybabel compile -d superset/translations -l fa -f`: before = 70 'placeholders are incompatible' errors; after = 3, all on `#, no-python-format` msgids `% calculation`, `% of parent`, `% of total` (no real placeholder; pre-existing babel false positives). messages.mo written (546160 bytes).\n3) `git diff | grep -c '^[-+]msgid'` -> 0 (no msgid text modified); `git diff --stat` -> 1 file, +89/-96.\n4) `pre-commit run` on staged diff -> all hooks Passed/Skipped.",
+          "blockers": "",
+          "ci_retries": 0,
+          "finished_at": "2026-09-26T22:55:39+00:00",
+          "result_digest": "f82ba50023a00806b7d9699b0106f115b5345b8a33e21d695a92382f98a4a3f5"
+        }
+      ],
+      "escalated": false
+    },
     "16": {
       "issue_number": 16,
       "fingerprint": "c30be43fbf9b6ec8",
