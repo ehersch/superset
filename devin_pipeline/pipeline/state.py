@@ -71,10 +71,15 @@ class StateStore:
         self.records[record.issue_number] = record
 
     def active(self) -> list[IssueRecord]:
-        """Records whose most recent session has not reached a terminal state."""
+        """Records whose most recent session has not been settled yet.
+
+        `finished_at` is the authority rather than the session status: a
+        `blocked` session is terminal to the pipeline but stays `blocked` in
+        the API, and polling it again would repost the same escalation.
+        """
         out = []
         for record in self.records.values():
             latest = record.latest
-            if latest and latest.status not in {"finished", "expired", "failed"}:
+            if latest and latest.finished_at is None:
                 out.append(record)
         return out

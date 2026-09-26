@@ -81,8 +81,13 @@ reviewable PRs beat twenty.
 - **Issue labels** move `devin-fix` → `devin-working` → `devin-fixed` or `needs-human`.
 - **Issue comments** record the session link, the ACU cap, the PR, the summary,
   and the verification transcript the session produced.
-- **Run report** (job summary and artifact) tables every tracked issue with its
-  wave, detector, session, attempt count, CI retries, outcome and PR.
+- **Run report** (job summary and artifact) opens with a scoreboard —
+  dispatched, in flight, fixed with a PR, escalated, not reproducible,
+  autonomous resolution rate, CI retries spent, median minutes to settle — then
+  tables every tracked issue with its wave, detector, session, attempt count,
+  CI retries, outcome and PR.
+- **`metrics.json`** (same artifact) carries those figures as JSON, so they can
+  be scraped into a dashboard instead of read by eye.
 - **Ledger** on the `devin-pipeline-state` branch: one commit per write, so the
   dispatch and settle history is auditable.
 
@@ -100,10 +105,34 @@ python -m devin_pipeline.pipeline.cli file
 python -m devin_pipeline.pipeline.cli dispatch --issue 42
 python -m devin_pipeline.pipeline.cli monitor
 python -m devin_pipeline.pipeline.cli report --out report.md
+python -m devin_pipeline.pipeline.cli metrics --out metrics.json
 ```
+
+Dispatch is gated on the label wherever it is invoked from: `dispatch --issue`
+refuses an issue that is not labelled `devin-fix`, and refuses one still
+labelled `needs-human`, so neither a detector nor a stray CLI call can spend a
+session a human did not approve.
 
 `--dry-run` (or `DRY_RUN=1`) makes every write a log line, including session
 creation, so the whole flow can be rehearsed without an API key.
+
+### In Docker
+
+The image carries Python and the Node toolchain the `npm_audit` detector shells
+out to, so a run needs nothing installed on the host:
+
+```bash
+docker build -f devin_pipeline/Dockerfile -t devin-pipeline .
+
+# Rehearse the detectors against a checkout mounted read-only
+docker run --rm -v "$PWD:/repo:ro" devin-pipeline --dry-run detect
+
+# Drive the real thing; the ledger lives on the mounted volume
+docker run --rm -e GITHUB_TOKEN -e DEVIN_API_KEY \
+  -e TARGET_REPO=ehersch/superset \
+  -v "$PWD:/repo:ro" -v "$PWD/.devin-pipeline:/state" \
+  devin-pipeline dispatch --issue 15
+```
 
 ### Configuration
 

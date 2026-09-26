@@ -81,12 +81,15 @@ jobs:
           TARGET_REPO: ${{ github.repository }}
         run: |
           python -m devin_pipeline.pipeline.cli report --out report.md
+          python -m devin_pipeline.pipeline.cli metrics --out metrics.json
           cat report.md >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: devin-pipeline-report
-          path: report.md
+          path: |
+            report.md
+            metrics.json
 
       - if: always()
         run: bash devin_pipeline/scripts/state_sync.sh push

@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import datetime
 from typing import Any, Iterable
 
 from .config import (
@@ -48,18 +49,34 @@ logger = logging.getLogger(__name__)
 PR_NUMBER = re.compile(r"/pull/(\d+)")
 
 
+def _minutes_between(start: str, end: str) -> float:
+    delta = datetime.fromisoformat(end) - datetime.fromisoformat(start)
+    return delta.total_seconds() / 60
+
+
 class Pipeline:
     def __init__(self, config: Config) -> None:
         self.config = config
         self.github = GitHubClient(
             config.github_token, config.repo, dry_run=config.dry_run
         )
-        self.devin = DevinClient(
-            config.devin_api_key,
-            base_url=config.devin_base_url,
-            dry_run=config.dry_run,
-        )
+        self._devin: DevinClient | None = None
         self.state = StateStore(config.state_path)
+
+    @property
+    def devin(self) -> DevinClient:
+        """Built on first use so key-less phases (detect, file, report) run."""
+        if self._devin is None:
+            self._devin = DevinClient(
+                self.config.devin_api_key,
+                base_url=self.config.devin_base_url,
+                dry_run=self.config.dry_run,
+            )
+        return self._devin
+
+    @devin.setter
+    def devin(self, client: DevinClient) -> None:
+        self._devin = client
 
     # -- detect ---------------------------------------------------------
 
@@ -114,8 +131,11 @@ class Pipeline:
                     match["number"],
                 )
                 continue
+            # Filing never carries the dispatch label: labelling is the human
+            # approval step, and a detector must not be able to spend ACUs.
+            labels = [label for label in finding.labels if label != DISPATCH_LABEL]
             issue = self.github.create_issue(
-                finding.title, finding.issue_body(), labels=finding.labels
+                finding.title, finding.issue_body(), labels=labels
             )
             filed.append(issue)
             logger.info("filed #%s %s", issue.get("number"), finding.title)
@@ -125,6 +145,22 @@ class Pipeline:
 
     def dispatch_issue(self, issue_number: int) -> Attempt | None:
         issue = self.github.get_issue(issue_number)
+        labels = {label["name"] for label in issue.get("labels", [])}
+        if DISPATCH_LABEL not in labels:
+            # The approval gate is the label, wherever the dispatch came from:
+            # a direct CLI call must not be a way around it.
+            logger.info("#%s is not labelled %s", issue_number, DISPATCH_LABEL)
+            return None
+        if ESCALATE_LABEL in labels:
+            self.github.comment(
+                issue_number,
+                f"This issue is still labelled `{ESCALATE_LABEL}` from an earlier "
+                f"attempt. Remove that label to let the pipeline try again — "
+                f"escalation means a human decided something, and re-labelling "
+                f"alone should not spend another session.",
+            )
+            self.github.remove_label(issue_number, DISPATCH_LABEL)
+            return None
         evidence = Evidence.parse(issue.get("body") or "")
         if evidence is None:
             self.github.comment(
@@ -259,18 +295,21 @@ class Pipeline:
         rather than a one-shot: the agent keeps its context and its branch, and
         the pipeline only escalates once the retry budget is spent.
         """
-        record = next(
-            (
-                rec
-                for rec in self.state.records.values()
-                if rec.latest and rec.latest.pr_url == pr_url
-            ),
-            None,
-        )
+        record = self._owner_of(pr_url)
+        if record is None or record.latest is None:
+            # The PR may have been opened since the last poll, so the ledger
+            # has no URL for it yet. Refresh live sessions once and re-check.
+            self._refresh_pr_urls()
+            record = self._owner_of(pr_url)
         if record is None or record.latest is None:
             logger.info("no tracked session owns %s", pr_url)
             return False
         attempt = record.latest
+        if attempt.finished_at is not None:
+            # A settled session cannot act on feedback; messaging it would burn
+            # a retry and change nothing.
+            logger.info("session %s already settled", attempt.session_id)
+            return False
         if attempt.ci_retries >= self.config.max_ci_retries:
             record.escalated = True
             self.state.save()
@@ -305,7 +344,65 @@ class Pipeline:
         )
         return True
 
+    def _owner_of(self, pr_url: str) -> IssueRecord | None:
+        return next(
+            (
+                rec
+                for rec in self.state.records.values()
+                if rec.latest and rec.latest.pr_url == pr_url
+            ),
+            None,
+        )
+
+    def _refresh_pr_urls(self) -> None:
+        for record in self.state.active():
+            attempt = record.latest
+            if attempt is None or attempt.pr_url:
+                continue
+            session = self.devin.get_session(attempt.session_id)
+            attempt.pr_url = extract_pr_url(session) or attempt.pr_url
+        self.state.save()
+
     # -- report ---------------------------------------------------------
+
+    def metrics(self) -> dict[str, Any]:
+        """The numbers an engineering leader would ask for.
+
+        Everything is derived from the ledger, so the same figures come out of
+        a scheduled run, a local run against a pulled ledger, and the report
+        artifact attached to a workflow run.
+        """
+        records = list(self.state.records.values())
+        attempts = [rec.latest for rec in records if rec.latest]
+        settled = [att for att in attempts if att.finished_at]
+        fixed = [
+            att for att in settled if att.outcome == Outcome.FIXED.value and att.pr_url
+        ]
+        durations = [
+            _minutes_between(att.created_at, att.finished_at)
+            for att in settled
+            if att.finished_at
+        ]
+        resolved = len(fixed) / len(settled) if settled else 0.0
+        return {
+            "issues_tracked": len(records),
+            "dispatched": len(attempts),
+            "in_flight": len(attempts) - len(settled),
+            "settled": len(settled),
+            "fixed_with_pr": len(fixed),
+            "escalated": sum(1 for rec in records if rec.escalated),
+            "not_reproducible": sum(
+                1 for att in settled if att.outcome == Outcome.NOT_REPRODUCIBLE.value
+            ),
+            "autonomous_resolution_rate": round(resolved, 3),
+            "ci_retries_spent": sum(att.ci_retries for att in attempts),
+            "sessions_needing_ci_retry": sum(
+                1 for att in attempts if att.ci_retries > 0
+            ),
+            "median_minutes_to_settle": (
+                round(sorted(durations)[len(durations) // 2], 1) if durations else None
+            ),
+        }
 
     def report(self) -> str:
         records = sorted(self.state.records.values(), key=lambda r: r.issue_number)
@@ -336,11 +433,28 @@ class Pipeline:
                 f"| {attempt.pr_url if attempt and attempt.pr_url else '—'} |"
             )
         tally = ", ".join(f"{count} {name}" for name, count in sorted(counts.items()))
+        stats = self.metrics()
+        rate = f"{stats['autonomous_resolution_rate'] * 100:.0f}%"
+        median = stats["median_minutes_to_settle"]
+        scoreboard = [
+            "| Metric | Value |",
+            "| --- | --- |",
+            f"| Issues tracked | {stats['issues_tracked']} |",
+            f"| Sessions dispatched | {stats['dispatched']} |",
+            f"| In flight | {stats['in_flight']} |",
+            f"| Fixed with a PR | {stats['fixed_with_pr']} |",
+            f"| Escalated to a human | {stats['escalated']} |",
+            f"| Not reproducible | {stats['not_reproducible']} |",
+            f"| Autonomous resolution rate | {rate} |",
+            f"| Sessions needing a CI retry | {stats['sessions_needing_ci_retry']} |",
+            f"| CI retries spent | {stats['ci_retries_spent']} |",
+            f"| Median minutes to settle | {median if median is not None else '—'} |",
+        ]
         return (
             f"# Devin remediation pipeline — run report\n\n"
             f"Repository: `{self.config.repo}`  \n"
             f"Generated: {utcnow()}  \n"
             f"Tracked issues: {len(records)} ({tally or 'none'})\n\n"
-            + "\n".join(rows)
-            + "\n"
+            f"## Scoreboard\n\n" + "\n".join(scoreboard) + "\n\n"
+            "## Per-issue ledger\n\n" + "\n".join(rows) + "\n"
         )

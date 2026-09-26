@@ -54,7 +54,9 @@ class FakeGitHub:
             yield issue
 
     def get_issue(self, number: int) -> dict[str, Any]:
-        return self.issues[number]
+        issue = dict(self.issues[number])
+        issue["labels"] = [{"name": name} for name in self.labels.get(number, set())]
+        return issue
 
     def create_issue(
         self, title: str, body: str, labels: list[str] | None = None
@@ -176,11 +178,37 @@ def test_dispatch_does_not_start_a_second_session_while_one_is_live(
     tmp_path: Path,
 ) -> None:
     devin = FakeDevin()
-    pipeline, _ = build(tmp_path, devin)
+    pipeline, github = build(tmp_path, devin)
     pipeline.file_issues([finding()])
+    github.add_labels(1, [DISPATCH_LABEL])
     pipeline.dispatch_issue(1)
+    github.add_labels(1, [DISPATCH_LABEL])
     pipeline.dispatch_issue(1)
     assert len(devin.created) == 1
+
+
+def test_filing_never_applies_the_approval_label(tmp_path: Path) -> None:
+    pipeline, github = build(tmp_path, FakeDevin())
+    pipeline.file_issues([finding()])
+    assert DISPATCH_LABEL not in github.labels[1]
+
+
+def test_dispatch_refuses_an_unlabelled_issue(tmp_path: Path) -> None:
+    devin = FakeDevin()
+    pipeline, _ = build(tmp_path, devin)
+    pipeline.file_issues([finding()])
+    assert pipeline.dispatch_issue(1) is None
+    assert devin.created == []
+
+
+def test_dispatch_refuses_an_issue_a_human_escalated(tmp_path: Path) -> None:
+    devin = FakeDevin()
+    pipeline, github = build(tmp_path, devin)
+    pipeline.file_issues([finding()])
+    github.add_labels(1, [DISPATCH_LABEL, ESCALATE_LABEL])
+    assert pipeline.dispatch_issue(1) is None
+    assert devin.created == []
+    assert DISPATCH_LABEL not in github.labels[1]
 
 
 def test_dispatch_refuses_an_issue_without_evidence(tmp_path: Path) -> None:
@@ -206,6 +234,7 @@ def test_monitor_marks_a_verified_fix_done_with_the_pr(tmp_path: Path) -> None:
     )
     pipeline, github = build(tmp_path, devin)
     pipeline.file_issues([finding()])
+    github.add_labels(1, [DISPATCH_LABEL])
     pipeline.dispatch_issue(1)
 
     settled = pipeline.monitor()
@@ -231,6 +260,7 @@ def test_monitor_escalates_a_session_that_could_not_finish(tmp_path: Path) -> No
     )
     pipeline, github = build(tmp_path, devin)
     pipeline.file_issues([finding()])
+    github.add_labels(1, [DISPATCH_LABEL])
     pipeline.dispatch_issue(1)
 
     settled = pipeline.monitor()
@@ -238,6 +268,9 @@ def test_monitor_escalates_a_session_that_could_not_finish(tmp_path: Path) -> No
     assert settled[0].escalated is True
     assert ESCALATE_LABEL in github.labels[1]
     assert "deck.gl 9 renames" in github.comments[1][-1]
+    # A blocked session stays blocked in the API; polling again must not
+    # repost the same escalation.
+    assert pipeline.monitor() == []
 
 
 def test_ci_failure_is_sent_back_to_the_owning_session_until_the_budget_runs_out(
@@ -248,6 +281,7 @@ def test_ci_failure_is_sent_back_to_the_owning_session_until_the_budget_runs_out
     pipeline.config.max_ci_retries = 1
     github.check_summary = "- **python-lint**: ruff failed"
     pipeline.file_issues([finding()])
+    github.add_labels(1, [DISPATCH_LABEL])
     attempt = pipeline.dispatch_issue(1)
     assert attempt is not None
     attempt.pr_url = "https://github.com/ehersch/superset/pull/7"
@@ -274,6 +308,7 @@ def test_state_survives_a_process_restart(tmp_path: Path) -> None:
     devin = FakeDevin()
     pipeline, github = build(tmp_path, devin)
     pipeline.file_issues([finding()])
+    github.add_labels(1, [DISPATCH_LABEL])
     pipeline.dispatch_issue(1)
 
     reloaded, _ = build(tmp_path, devin)
@@ -285,13 +320,40 @@ def test_state_survives_a_process_restart(tmp_path: Path) -> None:
 
 def test_report_lists_every_tracked_issue(tmp_path: Path) -> None:
     devin = FakeDevin()
-    pipeline, _ = build(tmp_path, devin)
+    pipeline, github = build(tmp_path, devin)
     pipeline.file_issues([finding()])
+    github.add_labels(1, [DISPATCH_LABEL])
     pipeline.dispatch_issue(1)
     report = pipeline.report()
     assert "Devin remediation pipeline" in report
     assert "npm_audit" in report
     assert "devin-1" in report
+    assert "Autonomous resolution rate" in report
+
+
+def test_metrics_count_the_lifecycle(tmp_path: Path) -> None:
+    devin = FakeDevin(
+        {
+            "status_enum": "finished",
+            "structured_output": {
+                "outcome": "fixed",
+                "pr_url": "https://github.com/ehersch/superset/pull/7",
+                "summary": "bumped po2json",
+                "verification": "clean",
+            },
+        }
+    )
+    pipeline, github = build(tmp_path, devin)
+    pipeline.file_issues([finding()])
+    github.add_labels(1, [DISPATCH_LABEL])
+    pipeline.dispatch_issue(1)
+
+    assert pipeline.metrics()["in_flight"] == 1
+    pipeline.monitor()
+    stats = pipeline.metrics()
+    assert stats["fixed_with_pr"] == 1
+    assert stats["in_flight"] == 0
+    assert stats["autonomous_resolution_rate"] == 1.0
 
 
 @pytest.mark.parametrize("budget", [0, 2])

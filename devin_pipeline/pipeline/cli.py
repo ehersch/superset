@@ -62,6 +62,9 @@ def _parser() -> argparse.ArgumentParser:
 
     report = sub.add_parser("report", help="write a run report")
     report.add_argument("--out", help="file to write the markdown report to")
+
+    metrics = sub.add_parser("metrics", help="print pipeline metrics as JSON")
+    metrics.add_argument("--out", help="file to write the metrics JSON to")
     return parser
 
 
@@ -102,8 +105,7 @@ def _run_dispatch(pipeline: Pipeline, issue: int | None) -> int:
     return 0
 
 
-def _run_report(pipeline: Pipeline, out: str | None) -> int:
-    text = pipeline.report()
+def _emit(text: str, out: str | None) -> int:
     if out:
         Path(out).write_text(text, encoding="utf-8")
     print(text)
@@ -145,7 +147,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "report":
-        return _run_report(pipeline, args.out)
+        return _emit(pipeline.report(), args.out)
+
+    if args.command == "metrics":
+        return _emit(json.dumps(pipeline.metrics(), indent=2), args.out)
 
     return 1
 

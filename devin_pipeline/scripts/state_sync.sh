@@ -35,20 +35,29 @@ pull_state() {
 }
 
 push_state() {
-  local work
+  local work remote
   work="$(mktemp -d)"
-  cp "${STATE_FILE}" "${work}/state.json"
+  remote="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
   git -C "${work}" init -q
   git -C "${work}" config user.name "devin-pipeline[bot]"
   git -C "${work}" config user.email "devin-pipeline@users.noreply.github.com"
+  git -C "${work}" remote add origin "${remote}"
+  # Each write continues the existing branch: the history of the ledger is the
+  # audit log of when every session was dispatched and settled, so a run must
+  # append to it rather than replace it.
+  if git -C "${work}" fetch -q --depth 1 origin "${BRANCH}" 2>/dev/null; then
+    git -C "${work}" checkout -q -B "${BRANCH}" FETCH_HEAD
+  else
+    git -C "${work}" checkout -q -b "${BRANCH}"
+  fi
+  cp "${STATE_FILE}" "${work}/state.json"
   git -C "${work}" add state.json
+  if git -C "${work}" diff --cached --quiet; then
+    rm -rf "${work}"
+    return 0
+  fi
   git -C "${work}" commit -q -m "state: ${GITHUB_RUN_ID:-local} ($(date -u +%FT%TZ))"
-  # The ledger is regenerated in full on every write, so the branch is force
-  # updated rather than merged; its history is an audit log, not a shared line
-  # of development.
-  git -C "${work}" push -q --force \
-    "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
-    "HEAD:refs/heads/${BRANCH}"
+  git -C "${work}" push -q origin "HEAD:refs/heads/${BRANCH}"
   rm -rf "${work}"
 }
 
