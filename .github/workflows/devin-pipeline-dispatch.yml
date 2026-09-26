@@ -92,14 +92,16 @@ jobs:
           name: devin-pipeline-report
           path: site
 
+      # The ledger is pushed before the dashboard so a failed push never leaves
+      # a public page reporting sessions that no later run can reconcile.
+      - if: always()
+        run: bash devin_pipeline/scripts/state_sync.sh push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # The dashboard is published from the state branch so a leader has a
       # stable URL rather than a per-run artifact to dig out of Actions.
       - if: github.event_name != 'pull_request'
         run: bash devin_pipeline/scripts/state_sync.sh publish site
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - if: always()
-        run: bash devin_pipeline/scripts/state_sync.sh push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

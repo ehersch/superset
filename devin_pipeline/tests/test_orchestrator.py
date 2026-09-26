@@ -31,7 +31,7 @@ from devin_pipeline.pipeline.config import (
     ESCALATE_LABEL,
     IN_PROGRESS_LABEL,
 )
-from devin_pipeline.pipeline.models import Finding, Severity
+from devin_pipeline.pipeline.models import Finding, Outcome, Severity
 from devin_pipeline.pipeline.orchestrator import Pipeline
 
 
@@ -451,6 +451,37 @@ def test_monitor_settles_a_session_that_reported_a_result_while_still_live(
     assert DONE_LABEL in github.labels[1]
     # ... and polling again does not re-settle the same result.
     assert pipeline.monitor() == []
+
+
+def test_a_session_that_ends_without_a_new_result_escalates(tmp_path: Path) -> None:
+    # After CI feedback the session can end without updating its structured
+    # output; the stale "fixed" must not settle the failed PR as fixed again.
+    devin = FakeDevin(
+        {
+            "status_enum": "working",
+            "structured_output": {
+                "outcome": "fixed",
+                "pr_url": "https://github.com/ehersch/superset/pull/9",
+                "summary": "bumped po2json",
+            },
+        }
+    )
+    pipeline, github = build(tmp_path, devin)
+    pipeline.file_issues([finding()])
+    github.add_labels(1, [DISPATCH_LABEL])
+    pipeline.dispatch_issue(1)
+    pipeline.monitor()
+    github.check_summary = "frontend-build failed"
+    pipeline.handle_ci_failure("https://github.com/ehersch/superset/pull/9", "abc123")
+    devin.session["status_enum"] = "finished"
+
+    settled = pipeline.monitor()
+
+    assert len(settled) == 1
+    assert settled[0].latest is not None
+    assert settled[0].latest.outcome == Outcome.NEEDS_HUMAN.value
+    assert ESCALATE_LABEL in github.labels[1]
+    assert DONE_LABEL not in github.labels[1]
 
 
 def test_ci_failure_reopens_a_settled_but_live_session(tmp_path: Path) -> None:

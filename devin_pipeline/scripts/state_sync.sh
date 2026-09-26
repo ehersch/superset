@@ -27,13 +27,20 @@ PAGES_BRANCH="${PAGES_BRANCH:-gh-pages}"
 STATE_DIR="${STATE_DIR:-.devin-pipeline}"
 STATE_FILE="${STATE_DIR}/state.json"
 
-# Clone just enough of a branch into a scratch worktree to add one commit to
-# it. Each write continues the existing branch: the history of the ledger is
-# the audit log of when every session was dispatched and settled, so a run
-# must append to it rather than replace it.
+# The scratch worktree holds a remote URL with the token in it, so it is
+# removed on any exit path, not only after a successful push.
+WORK=""
+cleanup() { [ -z "${WORK}" ] || rm -rf "${WORK}"; }
+trap cleanup EXIT
+
+# Clone just enough of a branch into a scratch worktree (left in ``WORK``) to
+# add one commit to it. Each write continues the existing branch: the history
+# of the ledger is the audit log of when every session was dispatched and
+# settled, so a run must append to it rather than replace it.
 checkout_branch() {
   local branch="$1" work remote
   work="$(mktemp -d)"
+  WORK="${work}"
   remote="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
   git -C "${work}" init -q
   git -C "${work}" config user.name "devin-pipeline[bot]"
@@ -44,19 +51,16 @@ checkout_branch() {
   else
     git -C "${work}" checkout -q -b "${branch}"
   fi
-  echo "${work}"
 }
 
 commit_and_push() {
   local work="$1" branch="$2"
   git -C "${work}" add -A
   if git -C "${work}" diff --cached --quiet; then
-    rm -rf "${work}"
     return 0
   fi
   git -C "${work}" commit -q -m "${branch}: ${GITHUB_RUN_ID:-local} ($(date -u +%FT%TZ))"
   git -C "${work}" push -q origin "HEAD:refs/heads/${branch}"
-  rm -rf "${work}"
 }
 
 pull_state() {
@@ -68,20 +72,19 @@ pull_state() {
 }
 
 push_state() {
-  local work
-  work="$(checkout_branch "${BRANCH}")"
-  cp "${STATE_FILE}" "${work}/state.json"
-  commit_and_push "${work}" "${BRANCH}"
+  checkout_branch "${BRANCH}"
+  cp "${STATE_FILE}" "${WORK}/state.json"
+  commit_and_push "${WORK}" "${BRANCH}"
 }
 
 # Publishes the generated dashboard so the status page has a stable URL
 # instead of living inside a per-run Actions artifact.
 publish_site() {
-  local src="$1" work
-  work="$(checkout_branch "${PAGES_BRANCH}")"
-  cp -R "${src}/." "${work}/"
-  touch "${work}/.nojekyll"
-  commit_and_push "${work}" "${PAGES_BRANCH}"
+  local src="$1"
+  checkout_branch "${PAGES_BRANCH}"
+  cp -R "${src}/." "${WORK}/"
+  touch "${WORK}/.nojekyll"
+  commit_and_push "${WORK}" "${PAGES_BRANCH}"
 }
 
 case "${1:-}" in

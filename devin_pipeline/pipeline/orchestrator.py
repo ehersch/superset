@@ -268,8 +268,15 @@ class Pipeline:
             if not (session_is_terminal(session) or fresh_result):
                 continue
             attempt.result_digest = digest
-            attempt.outcome = structured.get("outcome") or Outcome.NEEDS_HUMAN.value
-            attempt.summary = structured.get("summary") or ""
+            if fresh_result:
+                attempt.outcome = structured.get("outcome") or Outcome.NEEDS_HUMAN.value
+                attempt.summary = structured.get("summary") or ""
+            else:
+                # A session that ends without reporting again — after CI feedback,
+                # or with no structured output at all — has nothing new to claim.
+                attempt.outcome = Outcome.NEEDS_HUMAN.value
+                attempt.summary = "session ended without reporting a new result"
+                structured = {**structured, "outcome": Outcome.NEEDS_HUMAN.value}
             attempt.finished_at = utcnow()
             self._settle(record, attempt, structured)
             settled.append(record)
@@ -403,7 +410,7 @@ class Pipeline:
         artifact attached to a workflow run.
         """
         records = list(self.state.records.values())
-        attempts = [rec.latest for rec in records if rec.latest]
+        attempts = [att for rec in records for att in rec.attempts]
         settled = [att for att in attempts if att.finished_at]
         fixed = [
             att for att in settled if att.outcome == Outcome.FIXED.value and att.pr_url
