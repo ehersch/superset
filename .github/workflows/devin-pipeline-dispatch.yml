@@ -1,0 +1,107 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+# Trigger 2 of 3: the `devin-fix` label. Labelling an issue is the human
+# approval step — a detector may file freely, but nothing spends an ACU until
+# someone (or a triage rule) labels it.
+#
+# The same workflow polls live sessions on a short schedule and settles them,
+# because a session outlives the job that started it.
+name: devin-pipeline / dispatch
+
+on:
+  issues:
+    types: [labeled]
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  # Serialised: the ledger is a single file on a branch, and two jobs writing
+  # it concurrently would lose a dispatch record and re-spend on the same issue.
+  group: devin-pipeline-state
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    if: github.event_name != 'issues' || github.event.label.name == 'devin-fix'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+      - run: pip install -r devin_pipeline/requirements.txt
+      - run: bash devin_pipeline/scripts/state_sync.sh pull
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Dispatch labelled issue
+        if: github.event_name == 'issues'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          TARGET_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: python -m devin_pipeline.pipeline.cli dispatch --issue "${ISSUE_NUMBER}"
+
+      - name: Dispatch any backlog and settle live sessions
+        if: github.event_name != 'issues'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          TARGET_REPO: ${{ github.repository }}
+        run: |
+          python -m devin_pipeline.pipeline.cli dispatch
+          python -m devin_pipeline.pipeline.cli monitor
+
+      - name: Run report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+        run: |
+          mkdir -p site
+          python -m devin_pipeline.pipeline.cli report --out report.md
+          python -m devin_pipeline.pipeline.cli metrics --out site/metrics.json
+          python -m devin_pipeline.pipeline.cli dashboard --out site/index.html
+          cp report.md site/report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: devin-pipeline-report
+          path: site
+
+      # The ledger is pushed before the dashboard so a failed push never leaves
+      # a public page reporting sessions that no later run can reconcile.
+      - if: always()
+        run: bash devin_pipeline/scripts/state_sync.sh push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # The dashboard is published from the state branch so a leader has a
+      # stable URL rather than a per-run artifact to dig out of Actions.
+      - if: github.event_name != 'pull_request'
+        run: bash devin_pipeline/scripts/state_sync.sh publish site
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
