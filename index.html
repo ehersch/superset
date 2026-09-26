@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Devin remediation pipeline — ehersch/superset</title>
+<style>
+:root {
+  --bg: #0f1115; --panel: #171a21; --line: #272c37; --text: #e6e9ef;
+  --muted: #9aa3b2; --ok: #3fb950; --warn: #d29922; --live: #58a6ff;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.wrap { max-width: 1120px; margin: 0 auto; padding: 32px 24px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 15px; margin: 36px 0 12px; color: var(--muted);
+     text-transform: uppercase; letter-spacing: .08em; }
+.sub { color: var(--muted); margin: 0 0 28px; }
+.sub a { color: var(--live); }
+.cards { display: grid; gap: 12px;
+         grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.card { background: var(--panel); border: 1px solid var(--line);
+        border-radius: 10px; padding: 16px 18px; }
+.card .n { font-size: 30px; font-weight: 600; letter-spacing: -.02em; }
+.card .l { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.card.ok .n { color: var(--ok); }
+.card.warn .n { color: var(--warn); }
+.card.live .n { color: var(--live); }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 500;
+     padding: 8px 10px; border-bottom: 1px solid var(--line); }
+td { padding: 10px; border-bottom: 1px solid var(--line);
+     vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+a { color: var(--live); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.pill { display: inline-block; padding: 1px 9px; border-radius: 999px;
+        font-size: 12px; border: 1px solid var(--line); color: var(--muted); }
+.pill.ok { color: var(--ok); border-color: #1d4429; background: #12261a; }
+.pill.warn { color: var(--warn); border-color: #4a3a12; background: #241d0d; }
+.pill.live { color: var(--live); border-color: #1b3a5c; background: #10202f; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px; }
+.trace { color: var(--muted); max-width: 520px; }
+details summary { cursor: pointer; color: var(--live); font-size: 12px;
+                  margin-top: 6px; }
+pre { background: #0b0d11; border: 1px solid var(--line); border-radius: 6px;
+      padding: 10px; overflow-x: auto; font-size: 12px; white-space: pre-wrap;
+      margin: 8px 0 0; }
+.bars { display: flex; align-items: flex-end; gap: 6px; height: 120px;
+        background: var(--panel); border: 1px solid var(--line);
+        border-radius: 10px; padding: 16px; }
+.bar { flex: 1; display: flex; flex-direction: column; justify-content: flex-end;
+       align-items: center; gap: 4px; height: 100%; }
+.bar i { display: block; width: 100%; background: var(--live);
+         border-radius: 3px 3px 0 0; }
+.bar i.settled { background: var(--ok); }
+.bar span { font-size: 10px; color: var(--muted); }
+.empty { color: var(--muted); background: var(--panel);
+         border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+</style></head><body><div class="wrap">
+<h1>Devin remediation pipeline</h1>
+<p class="sub"><a href="https://github.com/ehersch/superset">ehersch/superset</a>
+ · generated 2026-09-26T23:19:56+00:00</p>
+<div class="cards"><div class="card live"><div class="n">1</div><div class="l">sessions in flight</div></div><div class="card ok"><div class="n">0</div><div class="l">fixed with a PR</div></div><div class="card warn"><div class="n">0</div><div class="l">escalated to a human</div></div><div class="card warn"><div class="n">0%</div><div class="l">autonomous resolution rate</div></div><div class="card "><div class="n">—</div><div class="l">median time to settle</div></div><div class="card "><div class="n">0</div><div class="l">CI retries spent</div></div><div class="card "><div class="n">1</div><div class="l">sessions dispatched</div></div><div class="card "><div class="n">1</div><div class="l">issues tracked</div></div></div>
+<h2>Throughput — sessions dispatched (blue) vs. settled (green), per hour</h2>
+<div class="bars"><div class="bar" title="09-26 23:00: 1 dispatched, 0 settled"><i class="settled" style="height:0%"></i><i style="height:100%"></i><span>23:00</span></div></div>
+<h2>Per-issue ledger</h2>
+<table><thead><tr><th>Issue</th><th>Detector</th><th>Status</th><th>PR</th><th>Session</th><th>Elapsed</th><th>CI retries</th><th>What the session did</th></tr></thead><tbody><tr><td><a href="https://github.com/ehersch/superset/issues/16">#16</a><br><span class="mono trace">fix(dashboard): duplicate slug save fails with a generic &#x27;unknow</span></td><td class="mono">upstream_mirror</td><td><span class="pill live">working</span></td><td>—</td><td><a class="mono" href="https://app.devin.ai/sessions/785ee42f3da84b688e58677b468dc49f">devin-785ee4</a></td><td>0m</td><td>0</td><td><div class="trace">session in progress</div></td></tr></tbody></table>
+</div></body></html>
