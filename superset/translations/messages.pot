@@ -25,7 +25,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Superset VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-23 14:29-0700\n"
+"POT-Creation-Date: 2026-09-26 23:55+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -933,6 +933,9 @@ msgid "A comma separated list of columns that should be parsed as dates"
 msgstr ""
 
 msgid "A comma-separated list of schemas that files are allowed to upload to."
+msgstr ""
+
+msgid "A dashboard with this slug already exists"
 msgstr ""
 
 msgid "A database port is required when connecting via SSH Tunnel."
@@ -9215,9 +9218,6 @@ msgstr ""
 
 #, python-brace-format
 msgid "Must be one of: {choices}."
-msgstr ""
-
-msgid "Must be unique"
 msgstr ""
 
 msgid "Must choose either a chart or a dashboard"
