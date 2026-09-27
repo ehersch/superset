@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -49,10 +50,10 @@ class FakeGitHub:
     def iter_issues(
         self, state: str = "open", labels: str | None = None
     ) -> Iterator[dict[str, Any]]:
-        for number, issue in self.issues.items():
+        for number in self.issues:
             if labels and labels not in self.labels.get(number, set()):
                 continue
-            yield issue
+            yield self.get_issue(number)
 
     def get_issue(self, number: int) -> dict[str, Any]:
         issue = dict(self.issues[number])
@@ -210,6 +211,52 @@ def test_dispatch_refuses_an_issue_a_human_escalated(tmp_path: Path) -> None:
     assert pipeline.dispatch_issue(1) is None
     assert devin.created == []
     assert DISPATCH_LABEL not in github.labels[1]
+
+
+def test_auto_approve_is_off_unless_a_limit_is_set(tmp_path: Path) -> None:
+    pipeline, github = build(tmp_path, FakeDevin())
+    pipeline.file_issues([finding()])
+    assert pipeline.auto_approve() == []
+    assert DISPATCH_LABEL not in github.labels[1]
+
+
+def test_auto_approve_labels_unclaimed_findings_up_to_the_limit(
+    tmp_path: Path,
+) -> None:
+    devin = FakeDevin()
+    pipeline, github = build(tmp_path, devin)
+    pipeline.config.auto_approve_limit = 2
+    for index in range(3):
+        pipeline.file_issues([finding(f"k{index}")])
+
+    approved = pipeline.auto_approve()
+
+    assert approved == [1, 2]
+    assert DISPATCH_LABEL in github.labels[1]
+    assert DISPATCH_LABEL in github.labels[2]
+    assert DISPATCH_LABEL not in github.labels[3]
+    assert "scheduled policy" in github.comments[1][0]
+    # The approval is the same gate a human uses, so dispatch picks it up.
+    pipeline.dispatch_labelled()
+    assert len(devin.created) == 2
+
+
+def test_auto_approve_skips_claimed_escalated_and_low_severity_issues(
+    tmp_path: Path,
+) -> None:
+    devin = FakeDevin()
+    pipeline, github = build(tmp_path, devin)
+    pipeline.config.auto_approve_limit = 10
+    for index in range(4):
+        pipeline.file_issues([finding(f"k{index}")])
+    github.add_labels(1, [ESCALATE_LABEL])
+    github.add_labels(2, [DISPATCH_LABEL])
+    pipeline.dispatch_issue(2)  # now devin-working with a ledger record
+    pipeline.file_issues([dataclasses.replace(finding("k4"), severity=Severity.LOW)])
+    github.create_issue("no evidence", "plain text")
+
+    assert pipeline.auto_approve() == [3, 4]
+    assert pipeline.auto_approve() == []  # idempotent once labelled
 
 
 def test_dispatch_refuses_an_issue_without_evidence(tmp_path: Path) -> None:
