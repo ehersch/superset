@@ -171,9 +171,10 @@ def _throughput(records: list[IssueRecord]) -> str:
 
 def _finding_row(finding: Finding) -> str:
     acceptance = "".join(f"<li>{escape(item)}</li>" for item in finding.acceptance)
+    severity = finding.severity.value
     return (
         "<tr>"
-        f"<td>{_pill(finding.severity.value, _SEVERITY_CLASS.get(finding.severity.value, ''))}</td>"
+        f"<td>{_pill(severity, _SEVERITY_CLASS.get(severity, ''))}</td>"
         f"<td>{escape(finding.title)}"
         f'<div class="trace mono">{escape(finding.key)} · wave {escape(finding.wave)}'
         f" · {escape(finding.fingerprint)}</div>"

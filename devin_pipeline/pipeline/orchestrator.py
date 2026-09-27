@@ -27,9 +27,10 @@ from __future__ import annotations
 import json
 import logging
 import re
+from collections.abc import Iterable
 from datetime import datetime
 from hashlib import sha256
-from typing import Any, Iterable
+from typing import Any
 
 from .config import (
     Config,
@@ -39,8 +40,7 @@ from .config import (
     IN_PROGRESS_LABEL,
     LABELS,
 )
-from .dashboard import render as render_dashboard
-from .dashboard import render_findings
+from .dashboard import render as render_dashboard, render_findings
 from .detectors.base import registry
 from .devin_client import (
     DevinClient,
@@ -103,8 +103,9 @@ class Pipeline:
                 continue
             try:
                 produced = list(detector(self.config.repo_path))
-            except Exception:  # noqa: BLE001 - one broken detector must not
-                # take the run down; the others still have work to file.
+            except Exception:
+                # One broken detector must not take the run down; the others
+                # still have work to file.
                 logger.exception("detector %s failed", name)
                 continue
             limit = self.config.max_issues_per_detector
