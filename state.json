@@ -289,14 +289,14 @@
           "session_url": "https://app.devin.ai/sessions/8acea74c49704d34a3643d7af6816633",
           "created_at": "2026-09-26T23:58:54+00:00",
           "status": "working",
-          "pr_url": null,
-          "outcome": null,
-          "summary": null,
-          "verification": null,
-          "blockers": null,
+          "pr_url": "https://github.com/ehersch/superset/pull/31",
+          "outcome": "fixed",
+          "summary": "Bumped the existing scoped js-yaml overrides (cosmiconfig, lerna, react-diff-viewer-continued) from ^4.3.1 to ^4.3.2 and added a root `pacote: ^21.5.1` override in superset-frontend/package.json, regenerating package-lock.json. This clears GHSA-2883-xcg3-v3hh and GHSA-w4pp-8pjf-rmxw without applying npm audit's suggested downgrade of lerna 10.0.1 -> 6.6.2 (10.0.1 is already latest; the downgrade would be a major regression).",
+          "verification": "Repro (before): `npm audit --package-lock-only --json | jq '.vulnerabilities | with_entries(select((.value.fixAvailable|type)==\"object\" and .value.fixAvailable.name == \"lerna\"))'` -> keys js-yaml, lerna, pacote, all high.\n1. After: same query -> {} ; `npm audit --package-lock-only | grep -c -E '^(js-yaml|lerna|pacote) '` -> 0.\n2. `diff /tmp/before.json /tmp/after.json` (audit key->severity maps before/after) -> only removals: js-yaml, lerna, pacote; no additions. Totals 20 -> 17.\n3. `npm ci --ignore-scripts` exit 0; `npx lerna list --json | jq length` -> 22; `npm run build` -> \"webpack 5.111.0 compiled with 4 warnings\", exit 0.\n4. No app source imports js-yaml/pacote/lerna (git grep), so ran smoke Jest: `npx cross-env NODE_ENV=test jest --silent src/utils/common.test.jsx src/utils/urlUtils.test.ts packages/superset-ui-core/test/utils` -> 15 suites / 89 tests passed.\n`git add -u && .venv/bin/pre-commit run` -> all Passed. CI on PR #31 pending at time of report.",
+          "blockers": "",
           "ci_retries": 0,
-          "finished_at": null,
-          "result_digest": null
+          "finished_at": "2026-09-27T00:22:35+00:00",
+          "result_digest": "7e553c01f0047afaaab3e5578042bb646456548edfb6174b6d46b3ce2df5fa59"
         }
       ],
       "escalated": false
@@ -313,18 +313,18 @@
           "session_id": "devin-ec644d71b0c04b039a7bcd0ac6cb781d",
           "session_url": "https://app.devin.ai/sessions/ec644d71b0c04b039a7bcd0ac6cb781d",
           "created_at": "2026-09-27T00:17:18+00:00",
-          "status": "working",
+          "status": "blocked",
           "pr_url": null,
-          "outcome": null,
-          "summary": null,
-          "verification": null,
-          "blockers": null,
+          "outcome": "needs_human",
+          "summary": "Reproduced the OSV finding for paramiko==3.5.1 but made no code change: the advisory (GHSA-r374-rxx8-8654 / PYSEC-2026-2858) marks all paramiko <= 4.0.0 as affected, so the only unaffected release is 5.0.0, which removes paramiko.DSSKey. sshtunnel==0.4.0 (the latest release, pinned in requirements and used by superset/extensions/ssh.py) references paramiko.DSSKey unconditionally in SSHTunnelForwarder.get_keys, so bumping paramiko breaks every SSH tunnel with an AttributeError; this is the reason pyproject.toml already pins paramiko<4.0.",
+          "verification": "1) .venv/bin/python -m devin_pipeline.pipeline.cli --dry-run detect --only osv_python -> '[high] 9f029a89d58dde21 security(deps): paramiko 3.5.1 is affected by 2 advisory(ies)', 1 finding (reproduced).\n2) curl https://api.osv.dev/v1/vulns/GHSA-r374-rxx8-8654 -> affected range {introduced: 0, last_affected: 4.0.0}; OSV query for paramiko 5.0.0 -> {} (unaffected). pip index versions paramiko -> latest 5.0.0; sshtunnel latest 0.4.0.\n3) Scratch venv: pip install paramiko==5.0.0 sshtunnel==0.4.0; python -c \"import sshtunnel; sshtunnel.SSHTunnelForwarder(('h',22), ssh_username='u', ssh_password='p', remote_bind_address=('x',1))\" -> AttributeError: module 'paramiko' has no attribute 'DSSKey'.\nAcceptance criteria 1-3 not attempted since the pin bump is known to break SSH tunnels; pytest tests/unit_tests not run.",
+          "blockers": "Choose a remediation path: (a) add a compatibility shim for paramiko.DSSKey in superset/extensions/ssh.py so paramiko 5.0.0 works with sshtunnel 0.4.0; (b) replace or vendor sshtunnel; or (c) accept the risk and suppress this advisory in the osv_python detector. A plain pin bump to 5.0.0 would break the SSH tunnel feature, so no PR was opened.",
           "ci_retries": 0,
-          "finished_at": null,
-          "result_digest": null
+          "finished_at": "2026-09-27T00:22:38+00:00",
+          "result_digest": "f5897a8d791ea89ae8d72f8c590c13bf496ed56ec37e183e9a821c4e57040fe3"
         }
       ],
-      "escalated": false
+      "escalated": true
     }
   }
 }
