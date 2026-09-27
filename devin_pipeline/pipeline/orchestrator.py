@@ -171,26 +171,42 @@ class Pipeline:
 
     # -- approval -------------------------------------------------------
 
-    def auto_approve(self) -> list[int]:
+    def auto_approve(self, issue_number: int | None = None) -> list[int]:
         """Label unclaimed detector issues `devin-fix` under a standing policy.
 
         This is the unattended counterpart of a human adding the label: same
-        gate, same audit trail on the issue, but applied on a schedule so the
-        backlog drains overnight. It only ever touches issues that carry an
-        evidence block and no pipeline label at all, so anything a human has
-        claimed, escalated or already approved is left alone, and it never
-        approves more than the configured limit per run.
+        gate, same audit trail on the issue, but applied by a schedule or by
+        the `issues.opened` event so the backlog drains without a triager. It
+        only ever touches issues that carry an evidence block and no pipeline
+        label at all, so anything a human has claimed, escalated or already
+        approved is left alone. Two budgets bound it: the per-run limit, and
+        the number of sessions allowed in flight at once, which is what keeps
+        thirty issues opened by one scan from becoming thirty sessions.
         """
         limit = self.config.auto_approve_limit
         if limit <= 0:
             return []
+        headroom = self.config.max_in_flight - len(self.state.active())
+        if headroom <= 0:
+            logger.info(
+                "auto-approve skipped: %s sessions in flight", len(self.state.active())
+            )
+            return []
+        limit = min(limit, headroom)
         threshold = SEVERITY_RANK.get(
             self.config.auto_approve_min_severity, SEVERITY_RANK[Severity.HIGH.value]
         )
+        candidates: Iterable[dict[str, Any]]
+        if issue_number is not None:
+            candidates = [self.github.get_issue(issue_number)]
+        else:
+            candidates = self.github.iter_issues(state="open")
         approved: list[int] = []
-        for issue in self.github.iter_issues(state="open"):
+        for issue in candidates:
             if len(approved) >= limit:
                 break
+            if issue.get("state", "open") != "open":
+                continue
             number = issue["number"]
             labels = {label["name"] for label in issue.get("labels", [])}
             if labels & PIPELINE_LABELS or self.state.get(number) is not None:
@@ -203,7 +219,7 @@ class Pipeline:
             self.github.add_labels(number, [DISPATCH_LABEL])
             self.github.comment(
                 number,
-                f"Approved for remediation by the scheduled policy "
+                f"Approved for remediation by the standing policy "
                 f"(severity `{evidence.severity}` \u2265 "
                 f"`{self.config.auto_approve_min_severity}`). A session is "
                 f"dispatched next; remove `{DISPATCH_LABEL}` first to veto.",

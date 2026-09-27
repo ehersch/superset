@@ -92,6 +92,7 @@ class Config:
     auto_approve_min_severity: str = field(
         default_factory=lambda: os.environ.get("AUTO_APPROVE_MIN_SEVERITY", "high")
     )
+    max_in_flight: int = field(default_factory=lambda: _int("MAX_IN_FLIGHT", 5))
     max_issues_per_detector: int = field(
         default_factory=lambda: _int("MAX_ISSUES_PER_DETECTOR", 6)
     )

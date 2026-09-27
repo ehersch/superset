@@ -18,9 +18,17 @@
 -->
 # Devin remediation pipeline
 
-An event-driven control plane that finds machine-verifiable defects in this
+An event-driven control plane that finds machine-verifiable defects in a target
 repository, files them as issues, and remediates them with Devin sessions
 created through the [Devin API](https://docs.devin.ai/api-reference/overview).
+
+It runs against [Apache Superset](https://github.com/apache/superset). The live
+results are in the fork it operates on, <https://github.com/ehersch/superset>:
+the [issues it filed](https://github.com/ehersch/superset/issues) and the
+[pull requests Devin opened against them](https://github.com/ehersch/superset/pulls).
+
+**New here?** [`docs/DEMO.md`](docs/DEMO.md) is the two-minute version: what the
+system is for, what is live right now, and what to click in what order.
 
 ```
  detectors ──▶ issues (evidence block) ──▶ label `devin-fix` ──▶ Devin session
@@ -49,9 +57,32 @@ explanation rather than turned into a vague prompt.
 ACU until an issue carries `devin-fix`. That keeps a noisy scan from becoming a
 spend incident and gives a human a natural place to intervene.
 
+**Unattended approval is a policy, not a bypass.** A standing policy may add
+`devin-fix` itself — when an issue is opened, and in the nightly run for any
+backlog — to unclaimed findings at or above a severity floor
+(`AUTO_APPROVE_MIN_SEVERITY`, default `high`), at most `AUTO_APPROVE_LIMIT` per
+run (default 3 in the workflows, 0 in the CLI) and never while `MAX_IN_FLIGHT`
+sessions (default 5) are already live. It goes through the same label, comments
+the decision on the issue, and never touches anything a human has claimed,
+escalated or already approved — so an evidence-backed issue becomes a session
+within a minute of being filed, while the label stays the single place to veto
+(`AUTO_APPROVE_LIMIT=0` makes it the only gate again) or fast-track.
+
 **Budgets are configuration, not comments.** Sessions carry `max_acu_limit`,
 dispatch is capped per run, and CI feedback is capped per PR. When a budget is
 exhausted the pipeline escalates (`needs-human`) instead of retrying.
+
+## Installing it into a repository
+
+The three workflows in `.github/workflows/` are the event surface; copy them
+into the repository the pipeline should operate on, add a `DEVIN_API_KEY`
+Actions secret, and vendor this package (or `pip install` it) so
+`python -m devin_pipeline.pipeline.cli` resolves. Everything else — the ledger
+branch, the labels, the dashboard branch — is created on first run.
+
+The detectors read a checkout of the target repository (`REPO_PATH`), so the
+workflows check that repository out and point the CLI at it; nothing about the
+control plane is Superset-specific except the detector set.
 
 ## Detectors
 
@@ -71,7 +102,8 @@ reviewable PRs beat twenty.
 
 | Event | Workflow | Action |
 | --- | --- | --- |
-| Nightly schedule / manual | `devin-pipeline-scan.yml` | run detectors, file or refresh issues |
+| Nightly schedule / manual | `devin-pipeline-scan.yml` | run detectors, file or refresh issues, auto-approve up to `AUTO_APPROVE_LIMIT` findings, dispatch, settle, publish |
+| `issues.opened` | `devin-pipeline-dispatch.yml` | if the issue carries an evidence block that meets the policy and budgets allow, label it `devin-fix` and create a Devin session |
 | `issues.labeled` with `devin-fix` | `devin-pipeline-dispatch.yml` | create a Devin session for that issue |
 | Every 15 min | `devin-pipeline-dispatch.yml` | poll live sessions, settle them, publish the run report |
 | `check_suite.completed` = failure | `devin-pipeline-ci-feedback.yml` | send the failing checks back into the owning session |
@@ -104,12 +136,16 @@ GitHub or the Devin API.
 
 ## Running it
 
+A guided, step-by-step walkthrough (what to run, what to look at, and why each
+step exists) is in [docs/WALKTHROUGH.md](docs/WALKTHROUGH.md).
+
 ```bash
 pip install -r devin_pipeline/requirements.txt
 
 # See what the detectors find, touching nothing
 python -m devin_pipeline.pipeline.cli --dry-run detect
 python -m devin_pipeline.pipeline.cli --dry-run detect --only npm_audit --json
+# …or as a page: --html findings.html, or --serve to read it at localhost:8000
 
 # File issues, dispatch, monitor, report (needs GITHUB_TOKEN + DEVIN_API_KEY)
 python -m devin_pipeline.pipeline.cli file
@@ -126,7 +162,11 @@ so a reviewer can regenerate the status page from a pulled state file.
 Dispatch is gated on the label wherever it is invoked from: `dispatch --issue`
 refuses an issue that is not labelled `devin-fix`, and refuses one still
 labelled `needs-human`, so neither a detector nor a stray CLI call can spend a
-session a human did not approve.
+session that was not approved.
+
+`approve` is the unattended approver: `approve --limit 3 --min-severity high`
+labels up to three unclaimed, evidence-bearing issues `devin-fix` and comments
+why, leaving `dispatch` to start their sessions. With no limit it is a no-op.
 
 `--dry-run` (or `DRY_RUN=1`) makes every write a log line, including session
 creation, so the whole flow can be rehearsed without an API key.
@@ -137,7 +177,7 @@ The image carries Python and the Node toolchain the `npm_audit` detector shells
 out to, so a run needs nothing installed on the host:
 
 ```bash
-docker build -f devin_pipeline/Dockerfile -t devin-pipeline .
+docker build -t devin-pipeline .
 
 # Rehearse the detectors against a checkout mounted read-only
 docker run --rm -v "$PWD:/repo:ro" devin-pipeline --dry-run detect
@@ -152,7 +192,8 @@ docker run --rm -e GITHUB_TOKEN -e DEVIN_API_KEY \
 #### One-shot end-to-end run
 
 `run` is the whole loop in a single container: detect the issues, file them,
-create a Devin session per approved issue, record each session id in the
+create a Devin session per approved issue (`--approve N` first approves up to
+`N` unclaimed findings itself), record each session id in the
 ledger, then poll every session until it settles and write the dashboard. It
 is what the GitHub triggers do across separate events, collapsed into one
 process so the system can be demonstrated without a webhook receiver.
@@ -196,6 +237,8 @@ by Actions.
 
 ```bash
 pytest devin_pipeline/tests -q
+ruff check devin_pipeline
+mypy devin_pipeline --ignore-missing-imports
 ```
 
 The orchestrator tests run the full detect → file → dispatch → monitor →
@@ -203,3 +246,10 @@ CI-retry → escalate flow against in-memory GitHub and Devin doubles, and asser
 the properties that cost money when they break: filing is idempotent, a live
 session is never duplicated, the CI retry budget is enforced, and the ledger
 survives a process restart.
+
+## Architecture
+
+![architecture](docs/architecture.png)
+
+Regenerate with `pip install graphviz && python docs/architecture.py` (needs the
+`graphviz` system package for `dot`).

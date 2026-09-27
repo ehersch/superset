@@ -25,6 +25,7 @@
 #   AUTO_APPROVE_LIMIT         issues approved per night (default 3; 0 = off,
 #                              which makes the `devin-fix` label the only gate)
 #   AUTO_APPROVE_MIN_SEVERITY  least severe finding to approve (default high)
+#   MAX_IN_FLIGHT              live sessions allowed before approval pauses (5)
 # Each approval is commented on the issue, and removing `devin-fix` before the
 # dispatch step runs vetoes it.
 name: devin-pipeline / scan
@@ -91,6 +92,7 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
           AUTO_APPROVE_LIMIT: ${{ inputs.approve || vars.AUTO_APPROVE_LIMIT || '3' }}
           AUTO_APPROVE_MIN_SEVERITY: ${{ vars.AUTO_APPROVE_MIN_SEVERITY || 'high' }}
+          MAX_IN_FLIGHT: ${{ vars.MAX_IN_FLIGHT || '5' }}
         run: |
           python -m devin_pipeline.pipeline.cli approve
           python -m devin_pipeline.pipeline.cli dispatch

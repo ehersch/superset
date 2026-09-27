@@ -64,6 +64,7 @@ def _parser() -> argparse.ArgumentParser:
         "approve",
         help="label unclaimed detector issues devin-fix under the standing policy",
     )
+    approve.add_argument("--issue", type=int, help="consider only this issue")
     approve.add_argument(
         "--limit", type=int, help="issues to approve this run (AUTO_APPROVE_LIMIT)"
     )
@@ -181,8 +182,8 @@ def _run_detect(
     return 0
 
 
-def _run_approve(pipeline: Pipeline) -> int:
-    approved = pipeline.auto_approve()
+def _run_approve(pipeline: Pipeline, issue: int | None) -> int:
+    approved = pipeline.auto_approve(issue)
     print(f"approved {len(approved)} issue(s): {' '.join(f'#{n}' for n in approved)}")
     return 0
 
@@ -294,7 +295,7 @@ def main(argv: list[str] | None = None) -> int:
             pipeline, args.only, args.as_json, args.html, args.serve
         ),
         "file": lambda: _run_file(pipeline, args.only),
-        "approve": lambda: _run_approve(pipeline),
+        "approve": lambda: _run_approve(pipeline, args.issue),
         "dispatch": lambda: _run_dispatch(pipeline, args.issue),
         "monitor": lambda: _run_monitor(pipeline),
         "ci-failure": lambda: _run_ci_failure(pipeline, args.pr_url, args.head_sha),

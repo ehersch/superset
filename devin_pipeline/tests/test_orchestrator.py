@@ -235,7 +235,7 @@ def test_auto_approve_labels_unclaimed_findings_up_to_the_limit(
     assert DISPATCH_LABEL in github.labels[1]
     assert DISPATCH_LABEL in github.labels[2]
     assert DISPATCH_LABEL not in github.labels[3]
-    assert "scheduled policy" in github.comments[1][0]
+    assert "standing policy" in github.comments[1][0]
     # The approval is the same gate a human uses, so dispatch picks it up.
     pipeline.dispatch_labelled()
     assert len(devin.created) == 2
@@ -257,6 +257,46 @@ def test_auto_approve_skips_claimed_escalated_and_low_severity_issues(
 
     assert pipeline.auto_approve() == [3, 4]
     assert pipeline.auto_approve() == []  # idempotent once labelled
+
+
+def test_auto_approve_can_target_the_issue_an_event_carries(tmp_path: Path) -> None:
+    devin = FakeDevin()
+    pipeline, github = build(tmp_path, devin)
+    pipeline.config.auto_approve_limit = 3
+    for index in range(3):
+        pipeline.file_issues([finding(f"k{index}")])
+
+    assert pipeline.auto_approve(2) == [2]
+    assert DISPATCH_LABEL in github.labels[2]
+    assert DISPATCH_LABEL not in github.labels[1]
+    assert DISPATCH_LABEL not in github.labels[3]
+    assert pipeline.dispatch_issue(2) is not None
+    assert pipeline.auto_approve(2) == []
+
+
+def test_auto_approve_pauses_while_the_in_flight_budget_is_spent(
+    tmp_path: Path,
+) -> None:
+    devin = FakeDevin()
+    pipeline, github = build(tmp_path, devin)
+    pipeline.config.auto_approve_limit = 10
+    pipeline.config.max_in_flight = 1
+    for index in range(3):
+        pipeline.file_issues([finding(f"k{index}")])
+
+    assert pipeline.auto_approve() == [1]
+    pipeline.dispatch_labelled()
+    assert len(devin.created) == 1
+    assert pipeline.auto_approve() == []
+
+    devin.session = {
+        "status_enum": "working",
+        "pull_request": {"url": "https://github.com/acme/superset/pull/1"},
+        "structured_output": {"outcome": "fixed", "summary": "s", "verification": "v"},
+    }
+    pipeline.monitor()
+    assert pipeline.auto_approve() == [2]
+    assert DISPATCH_LABEL in github.labels[2]
 
 
 def test_dispatch_refuses_an_issue_without_evidence(tmp_path: Path) -> None:
