@@ -13,15 +13,15 @@
           "session_id": "devin-38924e6155b44b3da4c459a1dc17267e",
           "session_url": "https://app.devin.ai/sessions/38924e6155b44b3da4c459a1dc17267e",
           "created_at": "2026-09-26T22:37:57+00:00",
-          "status": "blocked",
+          "status": "finished",
           "pr_url": null,
           "outcome": "not_reproducible",
           "summary": "On a clean checkout of ehersch/superset master (5b9733fd60), the restore-version command unit tests all pass; no code changes were made and no PR was opened.",
-          "verification": null,
-          "blockers": null,
+          "verification": "Setup: uv venv --python 3.11 .venv; uv pip install -r requirements/development.txt -e .\nRun 1: .venv/bin/pytest tests/unit_tests/commands/ -k restore -q -> 46 passed, 1519 deselected in 6.58s\nRuns 2-4 (repeated to rule out flakiness/ordering): 46 passed, 1519 deselected each time (5.31s, 5.17s, 5.22s)\ngit rev-parse --abbrev-ref HEAD -> master; git status --short -> clean",
+          "blockers": "A human should confirm the environment/commit where the six failures were observed (upstream apache/superset#44436 may not apply to this fork's master, or the failure may be dependency/version-specific). Nothing to fix here without a reproducing environment.",
           "ci_retries": 0,
-          "finished_at": "2026-09-26T22:43:11+00:00",
-          "result_digest": null
+          "finished_at": "2026-09-27T00:58:53+00:00",
+          "result_digest": "1c56f06113a5be6900ae3b465e11f08f8b339a4e919b5224e5ce3c24ae0d2c25"
         }
       ],
       "escalated": true
@@ -314,17 +314,17 @@
           "session_url": "https://app.devin.ai/sessions/ec644d71b0c04b039a7bcd0ac6cb781d",
           "created_at": "2026-09-27T00:17:18+00:00",
           "status": "blocked",
-          "pr_url": null,
-          "outcome": "needs_human",
-          "summary": "Reproduced the OSV finding for paramiko==3.5.1 but made no code change: the advisory (GHSA-r374-rxx8-8654 / PYSEC-2026-2858) marks all paramiko <= 4.0.0 as affected, so the only unaffected release is 5.0.0, which removes paramiko.DSSKey. sshtunnel==0.4.0 (the latest release, pinned in requirements and used by superset/extensions/ssh.py) references paramiko.DSSKey unconditionally in SSHTunnelForwarder.get_keys, so bumping paramiko breaks every SSH tunnel with an AttributeError; this is the reason pyproject.toml already pins paramiko<4.0.",
-          "verification": "1) .venv/bin/python -m devin_pipeline.pipeline.cli --dry-run detect --only osv_python -> '[high] 9f029a89d58dde21 security(deps): paramiko 3.5.1 is affected by 2 advisory(ies)', 1 finding (reproduced).\n2) curl https://api.osv.dev/v1/vulns/GHSA-r374-rxx8-8654 -> affected range {introduced: 0, last_affected: 4.0.0}; OSV query for paramiko 5.0.0 -> {} (unaffected). pip index versions paramiko -> latest 5.0.0; sshtunnel latest 0.4.0.\n3) Scratch venv: pip install paramiko==5.0.0 sshtunnel==0.4.0; python -c \"import sshtunnel; sshtunnel.SSHTunnelForwarder(('h',22), ssh_username='u', ssh_password='p', remote_bind_address=('x',1))\" -> AttributeError: module 'paramiko' has no attribute 'DSSKey'.\nAcceptance criteria 1-3 not attempted since the pin bump is known to break SSH tunnels; pytest tests/unit_tests not run.",
-          "blockers": "Choose a remediation path: (a) add a compatibility shim for paramiko.DSSKey in superset/extensions/ssh.py so paramiko 5.0.0 works with sshtunnel 0.4.0; (b) replace or vendor sshtunnel; or (c) accept the risk and suppress this advisory in the osv_python detector. A plain pin bump to 5.0.0 would break the SSH tunnel feature, so no PR was opened.",
+          "pr_url": "https://github.com/ehersch/superset/pull/33",
+          "outcome": "fixed",
+          "summary": "Upgraded paramiko from 3.5.1 to 5.0.0 (the only release OSV reports as unaffected by GHSA-r374-rxx8-8654 / PYSEC-2026-2858) in pyproject.toml, requirements/base.txt and requirements/development.txt, and added a narrow DSSKey shim in superset/extensions/ssh.py so sshtunnel 0.4.0 keeps working on paramiko 5 while rejecting DSA keys, with unit tests and an UPDATING.md note.",
+          "verification": "1) Repro before change: .venv/bin/python -m devin_pipeline.pipeline.cli --dry-run detect --only osv_python -> '[high] 9f029a89d58dde21 security(deps): paramiko 3.5.1 is affected by 2 advisory(ies)', 1 finding(s).\n2) Criterion 1 (unaffected pin): curl https://api.osv.dev/v1/query {package paramiko, version 5.0.0} -> {} (no vulns); after change: .venv/bin/python -m devin_pipeline.pipeline.cli --dry-run detect --only osv_python -> '0 finding(s)'.\n3) Criterion 2 (all requirements files consistent): RUNNING_IN_DOCKER=1 ./scripts/uv-pip-compile.sh --upgrade-package paramiko --python-version 3.11 (noise from --python-version reverted); git diff requirements/ shows only paramiko==3.5.1 -> paramiko==5.0.0 plus new transitive invoke==3.0.3 in both base.txt and development.txt; CI check-python-deps passed.\n4) Clean venv install: uv venv -p 3.11 /tmp/cleanv && uv pip install -p /tmp/cleanv/bin/python -r requirements/base.txt; python -c 'import paramiko, sshtunnel, superset.extensions.ssh; sshtunnel.SSHTunnelForwarder((\"h\",22), ssh_username=\"u\", ssh_password=\"p\", remote_bind_address=(\"x\",1), allow_agent=False, host_pkey_directories=[])' -> 'paramiko 5.0.0 DSSKey -> _UnsupportedDSSKey' / 'forwarder OK' (before the shim the same construction raised AttributeError: module 'paramiko' has no attribute 'DSSKey').\n5) SSH extension tests: .venv/bin/python -m pytest tests/unit_tests/extensions/ssh_test.py -q -> 20 passed (includes new tests: shim no-op when DSSKey exists, placeholder installed when absent and rejects DSA material, sshtunnel get_keys/read_private_key_file/SSHTunnelForwarder work with paramiko.DSSKey removed).\n6) Criterion 3: .venv/bin/python -m pytest tests/unit_tests -q -x -> 18296 passed, 38 skipped, 2 xfailed in 1033.77s.\n7) git add -u && .venv/bin/pre-commit run -> all hooks Passed (mypy, ruff, ruff-format, pylint, license, etc.).\n8) CI on PR #33: unit-tests (current), unit-tests-required, test-postgres-required, test-sqlite, test-postgres-presto/hive, playwright-tests-required, cypress-matrix-required, pre-commit (current), check-python-deps, python-dependency-liccheck, License Check, CodeQL all passed. Only dependency-review failed with 'Dependency review is not supported on this repository. Please ensure that Dependency graph is enabled' \u2014 a fork repo setting unrelated to this change.",
+          "blockers": "",
           "ci_retries": 0,
-          "finished_at": "2026-09-27T00:22:38+00:00",
-          "result_digest": "f5897a8d791ea89ae8d72f8c590c13bf496ed56ec37e183e9a821c4e57040fe3"
+          "finished_at": "2026-09-27T00:58:54+00:00",
+          "result_digest": "4851d32f8d0835971776bde949ff2c2fc1f39381e5c3f1b2952a7372307403de"
         }
       ],
-      "escalated": true
+      "escalated": false
     }
   }
 }
