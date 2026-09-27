@@ -296,8 +296,12 @@ class Pipeline:
         changed: list[IssueRecord] = []
         for record in self.state.escalated():
             attempt = record.latest
-            if attempt is None or attempt.status in TERMINAL_STATUSES:
+            if attempt is None:
                 continue
+            # The stored status is whatever the session reported when it
+            # escalated; a session that was `blocked` on a question is working
+            # again once the question is answered, so ask the API, not the
+            # ledger. The digest is what keeps this from reposting.
             session = self.devin.get_session(attempt.session_id)
             structured = session.get("structured_output") or {}
             digest = _digest(structured)
