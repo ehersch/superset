@@ -24,6 +24,14 @@ assists people when migrating to a new version.
 
 ## Next
 
+### SSH tunnels no longer accept DSA (ssh-dss) private keys
+
+`paramiko` is upgraded to 5.x (GHSA-r374-rxx8-8654), which removes DSA key
+support upstream. Superset ships a compatibility shim so that `sshtunnel` keeps
+working, but any SSH tunnel configured with a DSA private key, or any `id_dsa`
+file in the tunnel host's `~/.ssh`, is rejected instead of loaded. Re-key such
+tunnels with an ed25519, ECDSA, or RSA key.
+
 ### Guest token RLS rules without a dataset apply inside sub-queries
 
 A guest token RLS rule with no `dataset` key applies to every dataset. Such
