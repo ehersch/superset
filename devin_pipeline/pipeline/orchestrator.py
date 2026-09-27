@@ -40,6 +40,7 @@ from .config import (
     LABELS,
 )
 from .dashboard import render as render_dashboard
+from .dashboard import render_findings
 from .detectors.base import registry
 from .devin_client import (
     DevinClient,
@@ -440,6 +441,10 @@ class Pipeline:
                 round(sorted(durations)[len(durations) // 2], 1) if durations else None
             ),
         }
+
+    def findings_page(self, findings: list[Finding]) -> str:
+        """Detector output as a standalone HTML page."""
+        return render_findings(self.config.repo, findings)
 
     def dashboard(self) -> str:
         """The ledger as a standalone HTML status page."""

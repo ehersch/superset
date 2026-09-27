@@ -511,3 +511,13 @@ def test_ci_failure_reopens_a_settled_but_live_session(tmp_path: Path) -> None:
     assert DONE_LABEL not in github.labels[1]
     assert IN_PROGRESS_LABEL in github.labels[1]
     assert pipeline.metrics()["in_flight"] == 1
+
+
+def test_findings_page_carries_the_evidence_for_each_finding(tmp_path: Path) -> None:
+    pipeline, _ = build(tmp_path, FakeDevin())
+
+    page = pipeline.findings_page([finding()])
+
+    assert "npm audit --package-lock-only" in page
+    assert "no advisories remain" in page
+    assert finding().fingerprint in page
