@@ -300,6 +300,31 @@
         }
       ],
       "escalated": false
+    },
+    "12": {
+      "issue_number": 12,
+      "fingerprint": "9f029a89d58dde21",
+      "detector": "osv_python",
+      "wave": "A",
+      "title": "security(deps): paramiko 3.5.1 is affected by 2 advisory(ies)",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-ec644d71b0c04b039a7bcd0ac6cb781d",
+          "session_url": "https://app.devin.ai/sessions/ec644d71b0c04b039a7bcd0ac6cb781d",
+          "created_at": "2026-09-27T00:17:18+00:00",
+          "status": "working",
+          "pr_url": null,
+          "outcome": null,
+          "summary": null,
+          "verification": null,
+          "blockers": null,
+          "ci_retries": 0,
+          "finished_at": null,
+          "result_digest": null
+        }
+      ],
+      "escalated": false
     }
   }
 }
