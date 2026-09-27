@@ -102,7 +102,7 @@ def _serve(html: str, port: int) -> int:
     payload = html.encode()
 
     class Handler(BaseHTTPRequestHandler):
-        def do_GET(self) -> None:
+        def do_GET(self) -> None:  # noqa: N802 (http.server's dispatch name)
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(payload)))
