@@ -274,6 +274,49 @@ def test_monitor_escalates_a_session_that_could_not_finish(tmp_path: Path) -> No
     assert pipeline.monitor() == []
 
 
+def test_an_escalation_answered_in_the_session_settles_as_a_fix(
+    tmp_path: Path,
+) -> None:
+    # Escalating asks a question; a human can answer it in the session itself,
+    # and the next poll must pick up the answer rather than leave the issue
+    # labelled needs-human forever.
+    devin = FakeDevin(
+        {
+            "status_enum": "working",
+            "structured_output": {
+                "outcome": "needs_human",
+                "summary": "no safe upgrade without a decision",
+                "blockers": "paramiko 5 removes DSSKey",
+            },
+        }
+    )
+    pipeline, github = build(tmp_path, devin)
+    pipeline.file_issues([finding()])
+    github.add_labels(1, [DISPATCH_LABEL])
+    pipeline.dispatch_issue(1)
+    assert pipeline.monitor()[0].escalated is True
+
+    devin.session = {
+        "status_enum": "working",
+        "pull_request": {"url": "https://github.com/acme/superset/pull/9"},
+        "structured_output": {
+            "outcome": "fixed",
+            "summary": "shimmed DSSKey and upgraded",
+            "verification": "pytest passed",
+        },
+    }
+
+    settled = pipeline.monitor()
+
+    assert [record.issue_number for record in settled] == [1]
+    assert settled[0].escalated is False
+    assert ESCALATE_LABEL not in github.labels[1]
+    assert DONE_LABEL in github.labels[1]
+    assert "pull/9" in github.comments[1][-1]
+    # ... and the answer settles once, not on every later poll.
+    assert pipeline.monitor() == []
+
+
 def test_ci_failure_is_sent_back_to_the_owning_session_until_the_budget_runs_out(
     tmp_path: Path,
 ) -> None:

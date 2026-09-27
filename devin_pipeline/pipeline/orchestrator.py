@@ -281,8 +281,37 @@ class Pipeline:
             attempt.finished_at = utcnow()
             self._settle(record, attempt, structured)
             settled.append(record)
+        settled.extend(self.reconsider())
         self.state.save()
         return settled
+
+    def reconsider(self) -> list[IssueRecord]:
+        """Re-settle escalations whose session reported again afterwards.
+
+        Escalating is a question, not a verdict, and the session stays alive
+        holding its context. When a human answers it there, this is what turns
+        that answer into a PR, a label and a dashboard row — without anyone
+        re-running the pipeline by hand.
+        """
+        changed: list[IssueRecord] = []
+        for record in self.state.escalated():
+            attempt = record.latest
+            if attempt is None or attempt.status in TERMINAL_STATUSES:
+                continue
+            session = self.devin.get_session(attempt.session_id)
+            structured = session.get("structured_output") or {}
+            digest = _digest(structured)
+            if not session_has_result(session) or digest == attempt.result_digest:
+                continue
+            attempt.status = session.get("status_enum") or attempt.status
+            attempt.pr_url = extract_pr_url(session) or attempt.pr_url
+            attempt.result_digest = digest
+            attempt.outcome = structured.get("outcome") or Outcome.NEEDS_HUMAN.value
+            attempt.summary = structured.get("summary") or ""
+            attempt.finished_at = utcnow()
+            self._settle(record, attempt, structured)
+            changed.append(record)
+        return changed
 
     def _settle(
         self, record: IssueRecord, attempt: Attempt, structured: dict[str, Any]
@@ -295,6 +324,8 @@ class Pipeline:
         attempt.blockers = blockers
 
         if attempt.outcome == Outcome.FIXED.value and attempt.pr_url:
+            record.escalated = False
+            self.github.remove_label(number, ESCALATE_LABEL)
             self.github.add_labels(number, [DONE_LABEL])
             self.github.comment(
                 number,
