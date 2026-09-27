@@ -18,6 +18,8 @@
  */
 import type React from 'react';
 import fetchMock from 'fetch-mock';
+import { configureStore } from '@reduxjs/toolkit';
+import { configure as configureTranslation } from '@apache-superset/core/translation';
 import {
   render,
   screen,
@@ -32,6 +34,7 @@ import { ReactRouter5Adapter } from 'use-query-params/adapters/react-router-5';
 import AlertListComponent from 'src/pages/AlertReportList';
 import { SubjectType } from 'src/types/Subject';
 import getBootstrapData from 'src/utils/getBootstrapData';
+import messageToastsReducer from 'src/components/MessageToasts/reducers';
 
 jest.mock('src/utils/getBootstrapData', () => ({
   __esModule: true,
@@ -592,4 +595,113 @@ test('trigger-now action does not duplicate in-flight requests', async () => {
   await waitFor(() => {
     expect(fetchMock.callHistory.calls('execute-report-slow')).toHaveLength(1);
   });
+});
+
+const setupExecuteMock = () =>
+  fetchMock.post(
+    'glob:*/api/v1/report/*/execute',
+    {
+      execution_id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+      message: 'Triggered',
+    },
+    { name: 'execute-report' },
+  );
+
+const setupExecuteFailureMock = () =>
+  fetchMock.post(
+    'glob:*/api/v1/report/*/execute',
+    { status: 500, body: { message: 'boom' } },
+    { name: 'execute-report' },
+  );
+
+const renderAlertListWithStore = (props: Record<string, any> = {}) => {
+  const store = configureStore({
+    reducer: { messageToasts: messageToastsReducer },
+  });
+  render(
+    <Provider store={store}>
+      <MemoryRouter>
+        <QueryParamProvider adapter={ReactRouter5Adapter}>
+          <AlertList user={mockUser} {...props} />
+        </QueryParamProvider>
+      </MemoryRouter>
+    </Provider>,
+  );
+  const toastTexts = () =>
+    store.getState().messageToasts.map(toast => toast.text);
+  return { toastTexts };
+};
+
+test('trigger-now success toast uses per-type English message for alerts', async () => {
+  setupExecuteMock();
+  const { toastTexts } = renderAlertListWithStore();
+  await screen.findByText('Weekly Sales Alert');
+  fireEvent.click(screen.getAllByTestId('trigger-now-action')[0]);
+
+  await waitFor(() => expect(toastTexts()).toHaveLength(1));
+  expect(toastTexts()).toEqual([
+    'Alert "Weekly Sales Alert" triggered successfully',
+  ]);
+});
+
+test('trigger-now success toast uses per-type English message for reports', async () => {
+  setupExecuteMock();
+  const { toastTexts } = renderAlertListWithStore({ isReportEnabled: true });
+  await screen.findByText('Weekly Dashboard Report');
+  fireEvent.click(screen.getAllByTestId('trigger-now-action')[0]);
+
+  await waitFor(() => expect(toastTexts()).toHaveLength(1));
+  expect(toastTexts()).toEqual([
+    'Report "Weekly Dashboard Report" triggered successfully',
+  ]);
+});
+
+test('trigger-now failure toast uses per-type English message', async () => {
+  setupExecuteFailureMock();
+  const { toastTexts } = renderAlertListWithStore();
+  await screen.findByText('Weekly Sales Alert');
+  fireEvent.click(screen.getAllByTestId('trigger-now-action')[0]);
+
+  await waitFor(() => expect(toastTexts()).toHaveLength(1));
+  expect(toastTexts()[0]).toBe(
+    'Failed to trigger Alert "Weekly Sales Alert": boom',
+  );
+});
+
+test('trigger-now toasts are fully translated in a non-English locale', async () => {
+  configureTranslation({
+    languagePack: {
+      domain: 'superset',
+      locale_data: {
+        superset: {
+          '': {
+            domain: 'superset',
+            lang: 'es',
+            plural_forms: 'nplurals=2; plural=(n != 1);',
+          },
+          'Alert "%(alertName)s" triggered successfully': [
+            'La alerta "%(alertName)s" se activó correctamente',
+          ],
+          'Report "%(alertName)s" triggered successfully': [
+            'El informe "%(alertName)s" se activó correctamente',
+          ],
+        },
+      },
+    },
+  });
+
+  try {
+    setupExecuteMock();
+    const { toastTexts } = renderAlertListWithStore({ isReportEnabled: true });
+    await screen.findByText('Weekly Dashboard Report');
+    fireEvent.click(screen.getAllByTestId('trigger-now-action')[0]);
+
+    await waitFor(() => expect(toastTexts()).toHaveLength(1));
+    expect(toastTexts()).toEqual([
+      'El informe "Weekly Dashboard Report" se activó correctamente',
+    ]);
+    expect(toastTexts()[0]).not.toMatch(/^Report /);
+  } finally {
+    configureTranslation();
+  }
 });
