@@ -347,6 +347,20 @@
           "ci_retries": 0,
           "finished_at": "2026-09-27T21:13:18+00:00",
           "result_digest": "bb548e1e7b681cc6b572dd8c66b34841b9d1abe24ce7705cfa6b19cdb44d43cf"
+        },
+        {
+          "session_id": "devin-6e65c777ca564dfc91f805e77833db1c",
+          "session_url": "https://app.devin.ai/sessions/6e65c777ca564dfc91f805e77833db1c",
+          "created_at": "2026-09-27T23:50:47+00:00",
+          "status": "finished",
+          "pr_url": "https://github.com/ehersch/superset/pull/40",
+          "outcome": "fixed",
+          "summary": "handleExecuteReport in superset-frontend/src/pages/AlertReportList/index.tsx now selects one of two complete per-type message ids ('Alert \"%(alertName)s\" triggered successfully' / 'Report \"%(alertName)s\" triggered successfully', and matching 'Failed to trigger Alert/Report ...' ids) instead of interpolating the untranslated backend type word, so locale catalogs can translate the whole sentence; messages.pot was regenerated to include the new ids. English rendered output is byte-identical, and AlertReportList.test.tsx gained English Alert/Report success+failure toast assertions plus a Spanish-language-pack test that fails on master (renders 'Report \"Weekly Dashboard Report\" triggered successfully') and passes with the fix.",
+          "verification": "1) Repro (issue's literal command): cd superset-frontend && npm run test -- --testPathPattern 'alert.*toast|report.*toast' -> first failed with 'cross-env: not found' (deps missing); after `npm install --no-audit --no-fund --no-save` the pattern matched 0 test files (no such test exists). Reproduced instead by running the new Spanish test against unpatched index.tsx: `npx jest src/pages/AlertReportList/AlertReportList.test.tsx -t 'non-English'` -> FAIL, received 'Report \"Weekly Dashboard Report\" triggered successfully' (English type word in localized toast).\n2) Criteria 1-3 after fix: `cd superset-frontend && npx jest src/pages/AlertReportList/AlertReportList.test.tsx` -> Tests: 15 passed, 15 total. Includes: Alert success toast === 'Alert \"Weekly Sales Alert\" triggered successfully', Report success toast === 'Report \"Weekly Dashboard Report\" triggered successfully', Alert failure toast === 'Failed to trigger Alert \"Weekly Sales Alert\": boom' (English unchanged); Spanish language pack via configure() from @apache-superset/core/translation yields 'El informe \"Weekly Dashboard Report\" se activ\u00f3 correctamente' and does not match /^Report / (non-English locale, per-type ids).\n3) Pre-commit on staged diff: `.venv/bin/pre-commit run` (after `npx tsc -b packages/superset-core packages/superset-ui-core packages/superset-ui-chart-controls packages/superset-ui-switchboard plugins/*`) -> oxfmt, oxlint, custom frontend rules, stylelint, frontend type check all Passed.\n4) Translation template: `./scripts/translations/babel_update.sh` then `python scripts/translations/check_pot_drift.py` -> 'superset/translations/messages.pot matches a fresh extraction.' exit 0 (unrelated .po churn restored, only messages.pot kept).\n5) PR #40 CI final: 55 passed, 0 pending, 4 skipped, 1 failed \u2014 dependency-review fails with 'Dependency review is not supported on this repository. Please ensure that Dependency graph is enabled', a fork repository-settings issue independent of this change (sharded-jest-tests 1-8, lint-frontend, validate-frontend, babel-extract, frontend-check-translations, pre-commit all green).",
+          "blockers": "",
+          "ci_retries": 0,
+          "finished_at": "2026-09-27T23:50:49+00:00",
+          "result_digest": "bb548e1e7b681cc6b572dd8c66b34841b9d1abe24ce7705cfa6b19cdb44d43cf"
         }
       ],
       "escalated": false
