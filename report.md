@@ -1,7 +1,7 @@
 # Devin remediation pipeline — run report
 
 Repository: `ehersch/superset`  
-Generated: 2026-09-27T21:13:20+00:00  
+Generated: 2026-09-27T23:50:52+00:00  
 Tracked issues: 14 (13 fixed, 1 not_reproducible)
 
 ## Scoreboard
@@ -9,15 +9,15 @@ Tracked issues: 14 (13 fixed, 1 not_reproducible)
 | Metric | Value |
 | --- | --- |
 | Issues tracked | 14 |
-| Sessions dispatched | 14 |
+| Sessions dispatched | 15 |
 | In flight | 0 |
-| Fixed with a PR | 13 |
+| Fixed with a PR | 14 |
 | Escalated to a human | 1 |
 | Not reproducible | 1 |
 | Autonomous resolution rate | 93% |
 | Sessions needing a CI retry | 0 |
 | CI retries spent | 0 |
-| Median minutes to settle | 22.8 |
+| Median minutes to settle | 17.4 |
 
 ## Per-issue ledger
 
@@ -36,4 +36,4 @@ Tracked issues: 14 (13 fixed, 1 not_reproducible)
 | [#14](https://github.com/ehersch/superset/issues/14) | C | `upstream_mirror` | [`devin-6a7310`](https://app.devin.ai/sessions/6a7310d06b9e4475a79effcb52f4e0ef) | 1 | 0 | fixed | https://github.com/ehersch/superset/pull/21 |
 | [#15](https://github.com/ehersch/superset/issues/15) | C | `upstream_mirror` | [`devin-604f53`](https://app.devin.ai/sessions/604f531e415c4bf0a24c6e0892478449) | 1 | 0 | fixed | https://github.com/ehersch/superset/pull/29 |
 | [#16](https://github.com/ehersch/superset/issues/16) | C | `upstream_mirror` | [`devin-785ee4`](https://app.devin.ai/sessions/785ee42f3da84b688e58677b468dc49f) | 1 | 0 | fixed | https://github.com/ehersch/superset/pull/30 |
-| [#18](https://github.com/ehersch/superset/issues/18) | C | `upstream_mirror` | [`devin-6e65c7`](https://app.devin.ai/sessions/6e65c777ca564dfc91f805e77833db1c) | 1 | 0 | fixed | https://github.com/ehersch/superset/pull/40 |
+| [#18](https://github.com/ehersch/superset/issues/18) | C | `upstream_mirror` | [`devin-6e65c7`](https://app.devin.ai/sessions/6e65c777ca564dfc91f805e77833db1c) | 2 | 0 | fixed | https://github.com/ehersch/superset/pull/40 |
