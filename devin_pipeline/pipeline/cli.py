@@ -29,6 +29,7 @@ import logging
 import sys
 import time
 from collections.abc import Callable
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from .config import Config
@@ -47,9 +48,31 @@ def _parser() -> argparse.ArgumentParser:
     detect = sub.add_parser("detect", help="run detectors and print findings")
     detect.add_argument("--only", nargs="*", help="limit to these detectors")
     detect.add_argument("--json", action="store_true", dest="as_json")
+    detect.add_argument("--html", help="write the findings as an HTML page")
+    detect.add_argument(
+        "--serve",
+        nargs="?",
+        type=int,
+        const=8000,
+        help="serve that page on this port instead of printing (default 8000)",
+    )
 
     file_cmd = sub.add_parser("file", help="run detectors and file/refresh issues")
     file_cmd.add_argument("--only", nargs="*")
+
+    approve = sub.add_parser(
+        "approve",
+        help="label unclaimed detector issues devin-fix under the standing policy",
+    )
+    approve.add_argument("--issue", type=int, help="consider only this issue")
+    approve.add_argument(
+        "--limit", type=int, help="issues to approve this run (AUTO_APPROVE_LIMIT)"
+    )
+    approve.add_argument(
+        "--min-severity",
+        choices=["critical", "high", "moderate", "low"],
+        help="least severe finding to approve (AUTO_APPROVE_MIN_SEVERITY)",
+    )
 
     dispatch = sub.add_parser("dispatch", help="start sessions for devin-fix issues")
     dispatch.add_argument("--issue", type=int, help="dispatch a single issue")
@@ -70,19 +93,70 @@ def _parser() -> argparse.ArgumentParser:
 
     dash = sub.add_parser("dashboard", help="render the HTML status dashboard")
     dash.add_argument("--out", default="dashboard.html")
+    dash.add_argument(
+        "--serve",
+        nargs="?",
+        type=int,
+        const=8000,
+        help="also serve it on this port (default 8000)",
+    )
 
     run = sub.add_parser(
         "run", help="detect, file, dispatch and poll to completion in one process"
     )
     run.add_argument("--only", nargs="*", help="limit to these detectors")
+    run.add_argument(
+        "--approve",
+        type=int,
+        metavar="N",
+        help="auto-approve up to N unclaimed issues before dispatching",
+    )
     run.add_argument("--poll-interval", type=int, default=60, help="seconds")
     run.add_argument("--timeout", type=int, default=3600, help="seconds")
     run.add_argument("--dashboard-out", help="write the HTML dashboard here when done")
     return parser
 
 
-def _run_detect(pipeline: Pipeline, only: list[str] | None, as_json: bool) -> int:
+def _serve(html: str, port: int) -> int:
+    """Serve one page until interrupted, so `docker run -p` can show it."""
+    payload = html.encode()
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802 (http.server's dispatch name)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, *args: object) -> None:
+            return
+
+    print(f"serving findings on http://localhost:{port} (ctrl-c to stop)")
+    # An empty host binds every interface, which is what `docker run -p` needs
+    # to reach the server from the host.
+    with ThreadingHTTPServer(("", port), Handler) as httpd:
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            pass
+    return 0
+
+
+def _run_detect(
+    pipeline: Pipeline,
+    only: list[str] | None,
+    as_json: bool,
+    html: str | None = None,
+    serve: int | None = None,
+) -> int:
     findings = pipeline.detect(only)
+    if html or serve:
+        page = pipeline.findings_page(findings)
+        if html:
+            Path(html).write_text(page, encoding="utf-8")
+            print(f"wrote {html}")
+        return _serve(page, serve) if serve else 0
     if as_json:
         print(
             json.dumps(
@@ -108,6 +182,12 @@ def _run_detect(pipeline: Pipeline, only: list[str] | None, as_json: bool) -> in
     return 0
 
 
+def _run_approve(pipeline: Pipeline, issue: int | None) -> int:
+    approved = pipeline.auto_approve(issue)
+    print(f"approved {len(approved)} issue(s): {' '.join(f'#{n}' for n in approved)}")
+    return 0
+
+
 def _run_dispatch(pipeline: Pipeline, issue: int | None) -> int:
     if issue:
         attempt = pipeline.dispatch_issue(issue)
@@ -125,10 +205,11 @@ def _emit(text: str, out: str | None) -> int:
     return 0
 
 
-def _run_dashboard(pipeline: Pipeline, out: str) -> int:
-    Path(out).write_text(pipeline.dashboard(), encoding="utf-8")
+def _run_dashboard(pipeline: Pipeline, out: str, serve: int | None = None) -> int:
+    page = pipeline.dashboard()
+    Path(out).write_text(page, encoding="utf-8")
     print(f"wrote {out}")
-    return 0
+    return _serve(page, serve) if serve else 0
 
 
 def _run_file(pipeline: Pipeline, only: list[str] | None) -> int:
@@ -166,6 +247,9 @@ def _run_loop(
     filed = pipeline.file_issues(pipeline.detect(only))
     log.info("filed %d new issue(s)", len(filed))
 
+    approved = pipeline.auto_approve()
+    log.info("auto-approved %d issue(s)", len(approved))
+
     attempts = pipeline.dispatch_labelled()
     for attempt in attempts:
         log.info("session %s -> %s", attempt.session_id, attempt.session_url)
@@ -197,17 +281,27 @@ def main(argv: list[str] | None = None) -> int:
         config.dry_run = True
     if args.repo_path:
         config.repo_path = Path(args.repo_path).resolve()
+    if args.command == "approve":
+        if args.limit is not None:
+            config.auto_approve_limit = args.limit
+        if args.min_severity:
+            config.auto_approve_min_severity = args.min_severity
+    if args.command == "run" and args.approve is not None:
+        config.auto_approve_limit = args.approve
     pipeline = Pipeline(config)
 
     handlers: dict[str, Callable[[], int]] = {
-        "detect": lambda: _run_detect(pipeline, args.only, args.as_json),
+        "detect": lambda: _run_detect(
+            pipeline, args.only, args.as_json, args.html, args.serve
+        ),
         "file": lambda: _run_file(pipeline, args.only),
+        "approve": lambda: _run_approve(pipeline, args.issue),
         "dispatch": lambda: _run_dispatch(pipeline, args.issue),
         "monitor": lambda: _run_monitor(pipeline),
         "ci-failure": lambda: _run_ci_failure(pipeline, args.pr_url, args.head_sha),
         "report": lambda: _emit(pipeline.report(), args.out),
         "metrics": lambda: _emit(json.dumps(pipeline.metrics(), indent=2), args.out),
-        "dashboard": lambda: _run_dashboard(pipeline, args.out),
+        "dashboard": lambda: _run_dashboard(pipeline, args.out, args.serve),
         "run": lambda: _run_loop(
             pipeline,
             args.only,

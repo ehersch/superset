@@ -28,7 +28,14 @@ from datetime import datetime
 from html import escape
 from typing import Any
 
-from .models import Attempt, IssueRecord, Outcome, utcnow
+from .models import Attempt, Finding, IssueRecord, Outcome, utcnow
+
+_SEVERITY_CLASS = {
+    "critical": "crit",
+    "high": "warn",
+    "moderate": "",
+    "low": "",
+}
 
 _STATUS_CLASS = {
     Outcome.FIXED.value: "ok",
@@ -40,6 +47,7 @@ _CSS = """
 :root {
   --bg: #0f1115; --panel: #171a21; --line: #272c37; --text: #e6e9ef;
   --muted: #9aa3b2; --ok: #3fb950; --warn: #d29922; --live: #58a6ff;
+  --crit: #f85149;
 }
 * { box-sizing: border-box; }
 body {
@@ -74,6 +82,8 @@ a:hover { text-decoration: underline; }
 .pill.ok { color: var(--ok); border-color: #1d4429; background: #12261a; }
 .pill.warn { color: var(--warn); border-color: #4a3a12; background: #241d0d; }
 .pill.live { color: var(--live); border-color: #1b3a5c; background: #10202f; }
+.pill.crit { color: var(--crit); border-color: #5c1d1b; background: #2a1110; }
+.card.crit .n { color: var(--crit); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         font-size: 12px; }
 .trace { color: var(--muted); max-width: 520px; }
@@ -159,6 +169,76 @@ def _throughput(records: list[IssueRecord]) -> str:
     return f'<div class="bars">{"".join(bars)}</div>'
 
 
+def _finding_row(finding: Finding) -> str:
+    acceptance = "".join(f"<li>{escape(item)}</li>" for item in finding.acceptance)
+    severity = finding.severity.value
+    return (
+        "<tr>"
+        f"<td>{_pill(severity, _SEVERITY_CLASS.get(severity, ''))}</td>"
+        f"<td>{escape(finding.title)}"
+        f'<div class="trace mono">{escape(finding.key)} · wave {escape(finding.wave)}'
+        f" · {escape(finding.fingerprint)}</div>"
+        "<details><summary>evidence</summary>"
+        f"<pre>{escape(finding.body.strip()[:2000])}</pre>"
+        "</details>"
+        "<details><summary>reproduce</summary>"
+        f"<pre>{escape(finding.reproduce.strip())}</pre></details>"
+        "<details><summary>acceptance criteria</summary>"
+        f"<ul>{acceptance}</ul></details>"
+        "</td></tr>"
+    )
+
+
+def render_findings(repo: str, findings: list[Finding]) -> str:
+    """Render what the detectors found, before anything is filed or dispatched.
+
+    The same data the `detect` subcommand prints as one line per finding, with
+    the evidence each one carries — the reproduction and the acceptance
+    criteria — kept next to it instead of buried in the issue body.
+    """
+    counts: dict[str, int] = {}
+    for finding in findings:
+        counts[finding.severity.value] = counts.get(finding.severity.value, 0) + 1
+    cards = [("", len(findings), "findings")] + [
+        (_SEVERITY_CLASS.get(sev, ""), counts.get(sev, 0), sev)
+        for sev in ("critical", "high", "moderate", "low")
+    ]
+    card_html = "".join(
+        f'<div class="card {kind}"><div class="n">{value}</div>'
+        f'<div class="l">{escape(label)}</div></div>'
+        for kind, value, label in cards
+    )
+
+    sections = []
+    for detector in sorted({f.detector for f in findings}):
+        rows = "".join(
+            _finding_row(f)
+            for f in sorted(
+                (f for f in findings if f.detector == detector),
+                key=lambda f: list(_SEVERITY_CLASS).index(f.severity.value),
+            )
+        )
+        sections.append(
+            f"<h2>{escape(detector)}</h2>"
+            "<table><thead><tr><th>Severity</th><th>Finding</th></tr></thead>"
+            f"<tbody>{rows}</tbody></table>"
+        )
+    body = "".join(sections) or '<div class="empty">No findings.</div>'
+
+    return f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Detector findings — {escape(repo)}</title>
+<style>{_CSS}</style></head><body><div class="wrap">
+<h1>Detector findings</h1>
+<p class="sub"><a href="https://github.com/{escape(repo)}">{escape(repo)}</a>
+ · scanned {escape(utcnow())} · nothing is filed or dispatched by this view</p>
+<div class="cards">{card_html}</div>
+{body}
+</div></body></html>
+"""
+
+
 def render(repo: str, records: list[IssueRecord], stats: dict[str, Any]) -> str:
     """Render the ledger as a standalone HTML page."""
     rows = []
@@ -225,7 +305,9 @@ def render(repo: str, records: list[IssueRecord], stats: dict[str, Any]) -> str:
 <style>{_CSS}</style></head><body><div class="wrap">
 <h1>Devin remediation pipeline</h1>
 <p class="sub"><a href="https://github.com/{escape(repo)}">{escape(repo)}</a>
- · generated {escape(utcnow())}</p>
+ · generated {escape(utcnow())}<br>
+One row per Devin session: the issue it was approved for, what it returned, the
+PR to review, and the verification it ran to prove the fix.</p>
 <div class="cards">{card_html}</div>
 <h2>Throughput — sessions dispatched (blue) vs. settled (green), per hour</h2>
 {_throughput(records)}

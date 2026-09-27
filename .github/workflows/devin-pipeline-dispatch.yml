@@ -15,9 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Trigger 2 of 3: the `devin-fix` label. Labelling an issue is the human
-# approval step — a detector may file freely, but nothing spends an ACU until
-# someone (or a triage rule) labels it.
+# Trigger 2 of 3: an issue. Labelling one `devin-fix` is the approval step,
+# and opening one puts it in front of the standing policy: an issue that
+# carries an evidence block at or above AUTO_APPROVE_MIN_SEVERITY is labelled
+# and dispatched at once, bounded by MAX_IN_FLIGHT live sessions; anything else
+# waits for a human. Nothing spends an ACU without passing through the label.
 #
 # The same workflow polls live sessions on a short schedule and settles them,
 # because a session outlives the job that started it.
@@ -25,7 +27,7 @@ name: devin-pipeline / dispatch
 
 on:
   issues:
-    types: [labeled]
+    types: [opened, labeled]
   schedule:
     - cron: "*/15 * * * *"
   workflow_dispatch:
@@ -42,7 +44,10 @@ concurrency:
 
 jobs:
   dispatch:
-    if: github.event_name != 'issues' || github.event.label.name == 'devin-fix'
+    if: >-
+      github.event_name != 'issues'
+      || github.event.action == 'opened'
+      || github.event.label.name == 'devin-fix'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -56,7 +61,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Dispatch labelled issue
+      - name: Approve a newly opened issue under the standing policy
+        if: github.event_name == 'issues' && github.event.action == 'opened'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          AUTO_APPROVE_LIMIT: ${{ vars.AUTO_APPROVE_LIMIT || '3' }}
+          AUTO_APPROVE_MIN_SEVERITY: ${{ vars.AUTO_APPROVE_MIN_SEVERITY || 'high' }}
+          MAX_IN_FLIGHT: ${{ vars.MAX_IN_FLIGHT || '5' }}
+        run: python -m devin_pipeline.pipeline.cli approve --issue "${ISSUE_NUMBER}"
+
+      - name: Dispatch the issue
         if: github.event_name == 'issues'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

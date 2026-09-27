@@ -83,6 +83,16 @@ class Config:
         default_factory=lambda: _int("MAX_ACU_PER_SESSION", 40)
     )
     max_ci_retries: int = field(default_factory=lambda: _int("MAX_CI_RETRIES", 2))
+    # Unattended approval. 0 keeps the `devin-fix` label as the only gate; a
+    # positive limit lets a scheduled run label that many unclaimed issues per
+    # run itself, provided they are at least this severe.
+    auto_approve_limit: int = field(
+        default_factory=lambda: _int("AUTO_APPROVE_LIMIT", 0)
+    )
+    auto_approve_min_severity: str = field(
+        default_factory=lambda: os.environ.get("AUTO_APPROVE_MIN_SEVERITY", "high")
+    )
+    max_in_flight: int = field(default_factory=lambda: _int("MAX_IN_FLIGHT", 5))
     max_issues_per_detector: int = field(
         default_factory=lambda: _int("MAX_ISSUES_PER_DETECTOR", 6)
     )

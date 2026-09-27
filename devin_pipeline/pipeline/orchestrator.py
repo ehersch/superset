@@ -27,9 +27,10 @@ from __future__ import annotations
 import json
 import logging
 import re
+from collections.abc import Iterable
 from datetime import datetime
 from hashlib import sha256
-from typing import Any, Iterable
+from typing import Any
 
 from .config import (
     Config,
@@ -39,7 +40,7 @@ from .config import (
     IN_PROGRESS_LABEL,
     LABELS,
 )
-from .dashboard import render as render_dashboard
+from .dashboard import render as render_dashboard, render_findings
 from .detectors.base import registry
 from .devin_client import (
     DevinClient,
@@ -49,11 +50,22 @@ from .devin_client import (
     TERMINAL_STATUSES,
 )
 from .github_client import GitHubClient
-from .models import Attempt, Evidence, Finding, IssueRecord, Outcome, utcnow
+from .models import (
+    Attempt,
+    Evidence,
+    Finding,
+    IssueRecord,
+    Outcome,
+    Severity,
+    utcnow,
+)
 from .prompts import build_ci_feedback, build_prompt, STRUCTURED_OUTPUT_SCHEMA
 from .state import StateStore
 
 logger = logging.getLogger(__name__)
+
+PIPELINE_LABELS = {DISPATCH_LABEL, IN_PROGRESS_LABEL, DONE_LABEL, ESCALATE_LABEL}
+SEVERITY_RANK = {severity.value: rank for rank, severity in enumerate(Severity)}
 
 PR_NUMBER = re.compile(r"/pull/(\d+)")
 
@@ -102,8 +114,9 @@ class Pipeline:
                 continue
             try:
                 produced = list(detector(self.config.repo_path))
-            except Exception:  # noqa: BLE001 - one broken detector must not
-                # take the run down; the others still have work to file.
+            except Exception:
+                # One broken detector must not take the run down; the others
+                # still have work to file.
                 logger.exception("detector %s failed", name)
                 continue
             limit = self.config.max_issues_per_detector
@@ -155,6 +168,65 @@ class Pipeline:
             filed.append(issue)
             logger.info("filed #%s %s", issue.get("number"), finding.title)
         return filed
+
+    # -- approval -------------------------------------------------------
+
+    def auto_approve(self, issue_number: int | None = None) -> list[int]:
+        """Label unclaimed detector issues `devin-fix` under a standing policy.
+
+        This is the unattended counterpart of a human adding the label: same
+        gate, same audit trail on the issue, but applied by a schedule or by
+        the `issues.opened` event so the backlog drains without a triager. It
+        only ever touches issues that carry an evidence block and no pipeline
+        label at all, so anything a human has claimed, escalated or already
+        approved is left alone. Two budgets bound it: the per-run limit, and
+        the number of sessions allowed in flight at once, which is what keeps
+        thirty issues opened by one scan from becoming thirty sessions.
+        """
+        limit = self.config.auto_approve_limit
+        if limit <= 0:
+            return []
+        headroom = self.config.max_in_flight - len(self.state.active())
+        if headroom <= 0:
+            logger.info(
+                "auto-approve skipped: %s sessions in flight", len(self.state.active())
+            )
+            return []
+        limit = min(limit, headroom)
+        threshold = SEVERITY_RANK.get(
+            self.config.auto_approve_min_severity, SEVERITY_RANK[Severity.HIGH.value]
+        )
+        candidates: Iterable[dict[str, Any]]
+        if issue_number is not None:
+            candidates = [self.github.get_issue(issue_number)]
+        else:
+            candidates = self.github.iter_issues(state="open")
+        approved: list[int] = []
+        for issue in candidates:
+            if len(approved) >= limit:
+                break
+            if issue.get("state", "open") != "open":
+                continue
+            number = issue["number"]
+            labels = {label["name"] for label in issue.get("labels", [])}
+            if labels & PIPELINE_LABELS or self.state.get(number) is not None:
+                continue
+            evidence = Evidence.parse(issue.get("body") or "")
+            if evidence is None:
+                continue
+            if SEVERITY_RANK.get(evidence.severity, len(SEVERITY_RANK)) > threshold:
+                continue
+            self.github.add_labels(number, [DISPATCH_LABEL])
+            self.github.comment(
+                number,
+                f"Approved for remediation by the standing policy "
+                f"(severity `{evidence.severity}` \u2265 "
+                f"`{self.config.auto_approve_min_severity}`). A session is "
+                f"dispatched next; remove `{DISPATCH_LABEL}` first to veto.",
+            )
+            approved.append(number)
+            logger.info("auto-approved #%s (%s)", number, evidence.severity)
+        return approved
 
     # -- dispatch -------------------------------------------------------
 
@@ -280,8 +352,41 @@ class Pipeline:
             attempt.finished_at = utcnow()
             self._settle(record, attempt, structured)
             settled.append(record)
+        settled.extend(self.reconsider())
         self.state.save()
         return settled
+
+    def reconsider(self) -> list[IssueRecord]:
+        """Re-settle escalations whose session reported again afterwards.
+
+        Escalating is a question, not a verdict, and the session stays alive
+        holding its context. When a human answers it there, this is what turns
+        that answer into a PR, a label and a dashboard row — without anyone
+        re-running the pipeline by hand.
+        """
+        changed: list[IssueRecord] = []
+        for record in self.state.escalated():
+            attempt = record.latest
+            if attempt is None:
+                continue
+            # The stored status is whatever the session reported when it
+            # escalated; a session that was `blocked` on a question is working
+            # again once the question is answered, so ask the API, not the
+            # ledger. The digest is what keeps this from reposting.
+            session = self.devin.get_session(attempt.session_id)
+            structured = session.get("structured_output") or {}
+            digest = _digest(structured)
+            if not session_has_result(session) or digest == attempt.result_digest:
+                continue
+            attempt.status = session.get("status_enum") or attempt.status
+            attempt.pr_url = extract_pr_url(session) or attempt.pr_url
+            attempt.result_digest = digest
+            attempt.outcome = structured.get("outcome") or Outcome.NEEDS_HUMAN.value
+            attempt.summary = structured.get("summary") or ""
+            attempt.finished_at = utcnow()
+            self._settle(record, attempt, structured)
+            changed.append(record)
+        return changed
 
     def _settle(
         self, record: IssueRecord, attempt: Attempt, structured: dict[str, Any]
@@ -294,6 +399,8 @@ class Pipeline:
         attempt.blockers = blockers
 
         if attempt.outcome == Outcome.FIXED.value and attempt.pr_url:
+            record.escalated = False
+            self.github.remove_label(number, ESCALATE_LABEL)
             self.github.add_labels(number, [DONE_LABEL])
             self.github.comment(
                 number,
@@ -440,6 +547,10 @@ class Pipeline:
                 round(sorted(durations)[len(durations) // 2], 1) if durations else None
             ),
         }
+
+    def findings_page(self, findings: list[Finding]) -> str:
+        """Detector output as a standalone HTML page."""
+        return render_findings(self.config.repo, findings)
 
     def dashboard(self) -> str:
         """The ledger as a standalone HTML status page."""

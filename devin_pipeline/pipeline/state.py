@@ -83,3 +83,16 @@ class StateStore:
             if latest and latest.finished_at is None:
                 out.append(record)
         return out
+
+    def escalated(self) -> list[IssueRecord]:
+        """Records that settled as escalations rather than fixes.
+
+        Their sessions may still be alive: escalating is a question, and a
+        human can answer it in the session itself.
+        """
+        out = []
+        for record in self.records.values():
+            latest = record.latest
+            if record.escalated and latest and latest.finished_at:
+                out.append(record)
+        return out

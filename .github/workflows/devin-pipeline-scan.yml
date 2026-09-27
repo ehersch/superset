@@ -15,9 +15,19 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Trigger 1 of 3: scheduled scan. Runs the detectors against the checkout and
-# files (or refreshes) one issue per finding. Filing is idempotent by
-# fingerprint, so a nightly run never duplicates yesterday's issues.
+# Trigger 1 of 3: the nightly loop. Runs the detectors against the checkout,
+# files (or refreshes) one issue per finding, then approves and dispatches a
+# bounded number of unclaimed findings itself, so the backlog drains without
+# anyone adding `devin-fix` by hand. Filing is idempotent by fingerprint, so a
+# nightly run never duplicates yesterday's issues.
+#
+# The unattended approval is governed by two repository variables:
+#   AUTO_APPROVE_LIMIT         issues approved per night (default 3; 0 = off,
+#                              which makes the `devin-fix` label the only gate)
+#   AUTO_APPROVE_MIN_SEVERITY  least severe finding to approve (default high)
+#   MAX_IN_FLIGHT              live sessions allowed before approval pauses (5)
+# Each approval is commented on the issue, and removing `devin-fix` before the
+# dispatch step runs vetoes it.
 name: devin-pipeline / scan
 
 on:
@@ -28,14 +38,23 @@ on:
       only:
         description: "Space-separated detector names (blank = all)"
         required: false
+      approve:
+        description: "Issues to auto-approve this run (blank = AUTO_APPROVE_LIMIT variable)"
+        required: false
       dry_run:
-        description: "Detect without writing to GitHub"
+        description: "Detect without writing to GitHub or Devin"
         type: boolean
         default: false
 
 permissions:
-  contents: read
+  contents: write
   issues: write
+
+concurrency:
+  # Shares the dispatch workflow's group: both write the ledger, and the
+  # `issues.labeled` runs fired by this job's own approvals must queue behind it.
+  group: devin-pipeline-state
+  cancel-in-progress: false
 
 jobs:
   scan:
@@ -51,6 +70,10 @@ jobs:
         with:
           node-version: 20
       - run: pip install -r devin_pipeline/requirements.txt
+      - run: bash devin_pipeline/scripts/state_sync.sh pull
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Detect and file
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -60,3 +83,39 @@ jobs:
           ONLY: ${{ inputs.only }}
         run: |
           python -m devin_pipeline.pipeline.cli file ${ONLY:+--only ${ONLY}}
+
+      - name: Approve, dispatch and settle
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          TARGET_REPO: ${{ github.repository }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+          AUTO_APPROVE_LIMIT: ${{ inputs.approve || vars.AUTO_APPROVE_LIMIT || '3' }}
+          AUTO_APPROVE_MIN_SEVERITY: ${{ vars.AUTO_APPROVE_MIN_SEVERITY || 'high' }}
+          MAX_IN_FLIGHT: ${{ vars.MAX_IN_FLIGHT || '5' }}
+        run: |
+          python -m devin_pipeline.pipeline.cli approve
+          python -m devin_pipeline.pipeline.cli dispatch
+          python -m devin_pipeline.pipeline.cli monitor
+
+      - name: Run report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+        run: |
+          mkdir -p site
+          python -m devin_pipeline.pipeline.cli report --out report.md
+          python -m devin_pipeline.pipeline.cli metrics --out site/metrics.json
+          python -m devin_pipeline.pipeline.cli dashboard --out site/index.html
+          cp report.md site/report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - if: always() && !inputs.dry_run
+        run: bash devin_pipeline/scripts/state_sync.sh push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - if: ${{ !inputs.dry_run }}
+        run: bash devin_pipeline/scripts/state_sync.sh publish site
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
