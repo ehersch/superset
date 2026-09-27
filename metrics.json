@@ -3,11 +3,11 @@
   "dispatched": 13,
   "in_flight": 0,
   "settled": 13,
-  "fixed_with_pr": 11,
-  "escalated": 2,
+  "fixed_with_pr": 12,
+  "escalated": 1,
   "not_reproducible": 1,
-  "autonomous_resolution_rate": 0.846,
+  "autonomous_resolution_rate": 0.923,
   "ci_retries_spent": 0,
   "sessions_needing_ci_retry": 0,
-  "median_minutes_to_settle": 10.7
+  "median_minutes_to_settle": 17.4
 }
