@@ -6,7 +6,6 @@
 :root {
   --bg: #0f1115; --panel: #171a21; --line: #272c37; --text: #e6e9ef;
   --muted: #9aa3b2; --ok: #3fb950; --warn: #d29922; --live: #58a6ff;
-  --crit: #f85149;
 }
 * { box-sizing: border-box; }
 body {
@@ -41,8 +40,6 @@ a:hover { text-decoration: underline; }
 .pill.ok { color: var(--ok); border-color: #1d4429; background: #12261a; }
 .pill.warn { color: var(--warn); border-color: #4a3a12; background: #241d0d; }
 .pill.live { color: var(--live); border-color: #1b3a5c; background: #10202f; }
-.pill.crit { color: var(--crit); border-color: #5c1d1b; background: #2a1110; }
-.card.crit .n { color: var(--crit); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         font-size: 12px; }
 .trace { color: var(--muted); max-width: 520px; }
@@ -65,9 +62,7 @@ pre { background: #0b0d11; border: 1px solid var(--line); border-radius: 6px;
 </style></head><body><div class="wrap">
 <h1>Devin remediation pipeline</h1>
 <p class="sub"><a href="https://github.com/ehersch/superset">ehersch/superset</a>
- · generated 2026-09-27T00:59:13+00:00<br>
-One row per Devin session: the issue it was approved for, what it returned, the
-PR to review, and the verification it ran to prove the fix.</p>
+ · generated 2026-09-27T01:34:01+00:00</p>
 <div class="cards"><div class="card live"><div class="n">0</div><div class="l">sessions in flight</div></div><div class="card ok"><div class="n">12</div><div class="l">fixed with a PR</div></div><div class="card warn"><div class="n">1</div><div class="l">escalated to a human</div></div><div class="card ok"><div class="n">92%</div><div class="l">autonomous resolution rate</div></div><div class="card "><div class="n">17.4m</div><div class="l">median time to settle</div></div><div class="card "><div class="n">0</div><div class="l">CI retries spent</div></div><div class="card "><div class="n">13</div><div class="l">sessions dispatched</div></div><div class="card "><div class="n">13</div><div class="l">issues tracked</div></div></div>
 <h2>Throughput — sessions dispatched (blue) vs. settled (green), per hour</h2>
 <div class="bars"><div class="bar" title="09-26 22:00: 10 dispatched, 7 settled"><i class="settled" style="height:70%"></i><i style="height:100%"></i><span>22:00</span></div><div class="bar" title="09-26 23:00: 2 dispatched, 1 settled"><i class="settled" style="height:10%"></i><i style="height:20%"></i><span>23:00</span></div><div class="bar" title="09-27 00:00: 1 dispatched, 5 settled"><i class="settled" style="height:50%"></i><i style="height:10%"></i><span>00:00</span></div></div>
