@@ -45,8 +45,10 @@ import { URL_PARAMS } from 'src/constants';
 import { getDatasourceAsSaveableDataset } from 'src/utils/datasourceUtils';
 import {
   userHasPermission,
-  isUserAdmin,
+  isUserEditorOrAdmin,
+  SubjectRef,
 } from 'src/dashboard/util/permissionUtils';
+import Subject from 'src/types/Subject';
 import { ErrorMessageWithStackTrace } from 'src/components/ErrorMessage/ErrorMessageWithStackTrace';
 import ViewQueryModalFooter from 'src/explore/components/controls/ViewQueryModalFooter';
 import ViewQuery from 'src/explore/components/controls/ViewQuery';
@@ -54,18 +56,13 @@ import { SaveDatasetModal } from 'src/SqlLab/components/SaveDatasetModal';
 import { safeStringify } from 'src/utils/safeStringify';
 import { datasetLabelLower } from 'src/features/semanticLayers/label';
 import { Link } from 'react-router-dom';
-import getBootstrapData from 'src/utils/getBootstrapData';
 
 // Extended Datasource interface with all properties used in this component
 interface ExtendedDatasource extends Datasource {
   sql?: string;
   select_star?: string;
-  editors?: Array<{
-    id: number;
-    first_name: string;
-    last_name: string;
-    value?: number;
-  }>;
+  editors?: Subject[];
+  extra_editors?: SubjectRef[] | null;
   extra?: string;
   health_check_message?: string;
   cache_timeout?: number | null;
@@ -357,12 +354,11 @@ export default function DatasourceControl({
     }
   }
 
-  const userSubjects = getBootstrapData()?.common?.user_subjects ?? [];
-  const allowEdit =
-    datasource.editors?.some(o => {
-      const subjectId = o.id ?? o.value;
-      return subjectId !== undefined && userSubjects.includes(subjectId);
-    }) || isUserAdmin(user);
+  const allowEdit = isUserEditorOrAdmin(
+    user,
+    datasource.editors,
+    datasource.extra_editors,
+  );
 
   const canAccessSqlLab = userHasPermission(user, 'SQL Lab', 'menu_access');
 

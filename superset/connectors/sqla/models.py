@@ -111,6 +111,7 @@ from superset.models.helpers import (
 )
 from superset.models.slice import Slice
 from superset.models.sql_types.base import CurrencyType
+from superset.security.manager import get_extra_editor_subject_ids
 from superset.sql.metric_normalization import normalize_custom_metric
 from superset.sql.parse import sanitize_clause, SQLStatement, Table
 from superset.subjects.models import sqlatable_editors, Subject
@@ -1915,6 +1916,11 @@ class SqlaTable(
             data_["extra"] = self.extra
             data_["always_filter_main_dttm"] = self.always_filter_main_dttm
             data_["normalize_columns"] = self.normalize_columns
+            data_["editors"] = [
+                {"id": subject.id, "label": subject.label, "type": subject.type}
+                for subject in self.editors
+            ]
+            data_["extra_editors"] = get_extra_editor_subject_ids(self)
         return data_
 
     @property
