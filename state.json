@@ -364,6 +364,56 @@
         }
       ],
       "escalated": false
+    },
+    "10": {
+      "issue_number": 10,
+      "fingerprint": "57e61005c69fceff",
+      "detector": "npm_audit",
+      "wave": "A",
+      "title": "security(frontend): upgrade to @deck.gl/mesh-layers@8.9.36 to clear 2 advisory chain package(s)",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-1830bd275e044bda8b83f876df9a370c",
+          "session_url": "https://app.devin.ai/sessions/1830bd275e044bda8b83f876df9a370c",
+          "created_at": "2026-09-28T18:44:51+00:00",
+          "status": "working",
+          "pr_url": null,
+          "outcome": null,
+          "summary": null,
+          "verification": null,
+          "blockers": null,
+          "ci_retries": 0,
+          "finished_at": null,
+          "result_digest": null
+        }
+      ],
+      "escalated": false
+    },
+    "9": {
+      "issue_number": 9,
+      "fingerprint": "99451fdee9090a28",
+      "detector": "npm_audit",
+      "wave": "A",
+      "title": "security(frontend): upgrade to @deck.gl/geo-layers@9.0.6 to clear 9 advisory chain package(s)",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-fbc5b454266c484bbccddb706a4dc670",
+          "session_url": "https://app.devin.ai/sessions/fbc5b454266c484bbccddb706a4dc670",
+          "created_at": "2026-09-28T18:44:54+00:00",
+          "status": "working",
+          "pr_url": null,
+          "outcome": null,
+          "summary": null,
+          "verification": null,
+          "blockers": null,
+          "ci_retries": 0,
+          "finished_at": null,
+          "result_digest": null
+        }
+      ],
+      "escalated": false
     }
   }
 }
