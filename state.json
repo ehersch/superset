@@ -377,18 +377,18 @@
           "session_id": "devin-1830bd275e044bda8b83f876df9a370c",
           "session_url": "https://app.devin.ai/sessions/1830bd275e044bda8b83f876df9a370c",
           "created_at": "2026-09-28T18:44:51+00:00",
-          "status": "working",
-          "pr_url": null,
-          "outcome": null,
-          "summary": null,
-          "verification": null,
-          "blockers": null,
+          "status": "finished",
+          "pr_url": "https://github.com/ehersch/superset/pull/41",
+          "outcome": "needs_human",
+          "summary": "Added a scoped npm override (`texture-compressor` -> `image-size` ^2.0.4) that clears GHSA-w3rx-r6r6-pgpr (image-size <=2.0.2), the only high-severity root of the @deck.gl/mesh-layers / @luma.gl/gltf / @loaders.gl/{gltf,textures} chain. The issue's named target @deck.gl/mesh-layers@8.9.36 was tested and does not fix anything: it is a semver-major downgrade that npm audit still flags as high, and it breaks the @deck.gl/core ~9.2.5 peer pin.",
+          "verification": "Repro (issue's jq filter errors with 'Cannot index boolean with string \"name\"' because some fixAvailable values are booleans, so I checked directly): `npm audit --package-lock-only --json | jq '.vulnerabilities[\"@deck.gl/mesh-layers\"]'` on master -> severity high, via @loaders.gl/gltf and @luma.gl/gltf, fixAvailable 8.9.36 (isSemVerMajor). metadata was moderate 3 / high 14 / critical 3 / total 20.\n\nNamed-target test: in a scratch copy, set @deck.gl/mesh-layers to 8.9.36 (dependency and override), then `npx npm@11.19.1 install --package-lock-only && npm audit --package-lock-only --json`. Result: still total 20 / high 14, mesh-layers still high, fixAvailable now 8.6.5.\n\n1) After the fix: `npx npm@11.19.1 audit --package-lock-only --json | jq -c .metadata.vulnerabilities` -> {moderate:5, high:6, critical:3, total:14}. `jq '.vulnerabilities[\"@deck.gl/mesh-layers\"]'` -> null. @luma.gl/gltf, @loaders.gl/gltf, @loaders.gl/textures, texture-compressor and image-size are also gone.\n2) No new advisory keys or IDs (8 unique advisory sources before -> 7 after, none new). No severity increases. geo-layers and 3d-tiles dropped from high to moderate; they remain flagged only through the existing fflate advisory.\n3) `npx npm@11.19.1 ci && npm run build` -> exit 0, 'webpack 5.111.0 compiled with 4 warnings' (0 errors). CI frontend-build also passed.\n4) `npm run test -- plugins/preset-chart-deckgl` -> Test Suites: 34 passed, 34 total; Tests: 403 passed. CI sharded-jest-tests 1-8 also passed.\n\n`.venv/bin/pre-commit run` on the staged diff -> all hooks Passed or Skipped. PR CI: 47 passed, 1 failed (dependency-review, due to the repo setting; it also fails on PR #32).",
+          "blockers": "The issue names @deck.gl/mesh-layers@8.9.36 as the fix, and the rules forbid version bumps the issue doesn't name. I tested that target in a scratch copy (dependency plus override set to 8.9.36, lockfile regenerated). npm audit still reports the same 20 vulns (moderate 3 / high 14 / critical 3), still flags mesh-layers as high, and now points to 8.6.5 as the fix. This PR instead bumps image-size 0.7.5 -> 2.0.4, scoped under texture-compressor. A human must approve that deviation. They should also accept one trade-off: texture-compressor's getImageSize(path) passes a file path, which the image-size 2.x API (Uint8Array only) doesn't accept. It is only reachable through the `npx texture-compressor` CLI used by loaders.gl's Node-only encodeTexture, which Superset doesn't use. The PR stays a draft until then. Separately, the one failing CI check, dependency-review, fails because 'Dependency review is not supported on this repository' (Dependency graph is disabled). It fails the same way on already-merged PR #32. All other CI checks pass.",
           "ci_retries": 0,
-          "finished_at": null,
-          "result_digest": null
+          "finished_at": "2026-09-28T23:34:41+00:00",
+          "result_digest": "12f6f13de569c518f970e79c28f25dad700356a7b2dae4aa565d25e0748921ff"
         }
       ],
-      "escalated": false
+      "escalated": true
     },
     "9": {
       "issue_number": 9,
@@ -402,18 +402,18 @@
           "session_id": "devin-fbc5b454266c484bbccddb706a4dc670",
           "session_url": "https://app.devin.ai/sessions/fbc5b454266c484bbccddb706a4dc670",
           "created_at": "2026-09-28T18:44:54+00:00",
-          "status": "working",
+          "status": "finished",
           "pr_url": null,
-          "outcome": null,
-          "summary": null,
-          "verification": null,
-          "blockers": null,
+          "outcome": "needs_human",
+          "summary": "The advisory reproduces on master (geo-layers 9.2.9), but the fix the issue names doesn't work: @deck.gl/geo-layers@9.0.6 is actually a downgrade from 9.2.9, and after applying it npm audit still flags all 10 packages (same 20 vulns) and just points to 8.9.36 as the next fix. No PR was opened, because shipping the named fix would downgrade deck.gl without clearing anything, and the only real fixes need version changes the issue doesn't name.",
+          "verification": "1) Reproduce (master, fd86cd61c5): `cd superset-frontend && npm audit --package-lock-only --json | jq '.vulnerabilities | with_entries(select((.value.fixAvailable|type)==\"object\" and .value.fixAvailable.name == \"@deck.gl/geo-layers\"))'` -> all 10 packages reported, fixAvailable {name:@deck.gl/geo-layers, version:9.0.6, isSemVerMajor:true}; metadata 3 moderate / 14 high / 3 critical (20). The lockfile has geo-layers 9.2.9, loaders.gl 4.3.4, fflate 0.7.4 (nested), image-size 0.7.5, texture-compressor 1.0.2. The issue's jq filter (`.value.fixAvailable.name == \"\"`) errors with 'Cannot index boolean with string \"name\"', so I adjusted it to the object check above. 2) Tried the named fix: set @deck.gl/geo-layers to 9.0.6 in the root dependencies, the root overrides and plugins/preset-chart-deckgl/package.json, then `npm install --package-lock-only --ignore-scripts` (lock now resolves geo-layers 9.0.6), then `npm audit --package-lock-only --json` -> still 20 vulns (3 moderate / 14 high / 3 critical). All 10 packages are still reported (@deck.gl/geo-layers high, @loaders.gl/3d-tiles high, @loaders.gl/compression moderate, @loaders.gl/gltf high, @loaders.gl/textures high, @loaders.gl/zip moderate, @luma.gl/gltf high, fflate moderate, image-size high, texture-compressor high). geo-layers' fixAvailable now says 8.9.36. Acceptance criterion 1 FAILS, so I didn't run criteria 2-4 (npm run build, Jest) on it. 3) Tried alternative (a): fflate override + `npm update @loaders.gl/{3d-tiles,core,gltf,textures,compression,zip} --package-lock-only` + `npm prune --package-lock-only` -> 17 vulns (0 moderate / 14 high / 3 critical); fflate, @loaders.gl/compression and @loaders.gl/zip CLEAR; `comm -13` on before/after vulnerability keys showed no new advisories. texture-compressor/image-size are still reported through the optional peer dependency. Reverted all changes and deleted the local branch; the working tree is clean on master.",
+          "blockers": "A human must pick a remediation, since the named target (geo-layers@9.0.6) is a no-op. Every @loaders.gl/textures up to 4.4.x depends on texture-compressor@1.0.2 -> image-size@^0.7.4 (high, GHSA-w3rx-r6r6-pgpr), and every @loaders.gl/compression up to the latest (4.5.2) pins fflate 0.7.4 (moderate, GHSA-px8p-9vwx-vf98). Options: (a) add a package.json override for @loaders.gl/compression -> fflate ^0.8.3 and refresh @loaders.gl/* to 4.5.x, which geo-layers 9.2's ^4.3.4 range allows. I tested this and it clears fflate, @loaders.gl/compression and @loaders.gl/zip with no new advisories. But texture-compressor/image-size are still reported because loaders.gl 4.5.2 keeps texture-compressor as an optional peer dependency, and the lockfile ends up with a mix of 4.3.4 and 4.5.x loaders.gl packages. (b) Also override image-size to >=2.0.3 under texture-compressor. That is a major-version jump for texture-compressor, a Node CLI that isn't bundled into the frontend. (c) Accept or suppress the image-size advisory as not reachable from the browser bundle. Also, the pipeline's npm_audit detector should stop filing npm's fixAvailable as the fix when it's a semver-major downgrade.",
           "ci_retries": 0,
-          "finished_at": null,
-          "result_digest": null
+          "finished_at": "2026-09-28T23:34:43+00:00",
+          "result_digest": "adfb96f1550b12d54977dd40979098f173ed6c377a1ef08627d7e2e483c025ce"
         }
       ],
-      "escalated": false
+      "escalated": true
     }
   }
 }
