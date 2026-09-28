@@ -331,7 +331,9 @@ def test_dashboard_table_serialization_includes_capabilities_and_parent() -> Non
         "normalize_columns",
         "column_types",
         "column_names",
+        "editors",
     }
+    assert serialized["editors"] == []
     assert serialized["parent"] == {"name": "Warehouse"}
     assert serialized["database"]["name"] == "Warehouse"
     assert serialized["supports_samples"] is True

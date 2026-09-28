@@ -111,6 +111,12 @@ class DatasetSchema(Schema):
         fields.Nested(SubjectResponseSchema),
         metadata={"description": "List of editors"},
     )
+    extra_editors = fields.List(
+        fields.Integer(),
+        metadata={
+            "description": "Subject IDs granted editorship by EXTRA_EDITORS_RESOLVER"
+        },
+    )
     params = fields.Dict(metadata={"description": "Extra params for the dataset."})
     perm = fields.String(metadata={"description": "Permission expression."})
     schema = fields.String(metadata={"description": "Dataset schema."})
