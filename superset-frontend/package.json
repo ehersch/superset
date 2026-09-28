@@ -428,6 +428,9 @@
       "js-yaml": "^4.3.1"
     },
     "tar": "^7.5.16",
+    "texture-compressor": {
+      "image-size": "^2.0.4"
+    },
     "typescript-json-schema": "^0.68.0",
     "uuid": "$uuid"
   },
