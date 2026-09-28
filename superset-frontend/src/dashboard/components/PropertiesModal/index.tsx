@@ -177,6 +177,13 @@ const PropertiesModal = ({
       typeof (message as { json_metadata: unknown }).json_metadata === 'string'
     ) {
       errorText = (message as { json_metadata: string }).json_metadata;
+    } else if (typeof message === 'object' && message !== null) {
+      const fieldErrors = Object.values(message as Record<string, unknown>)
+        .flatMap(value => (Array.isArray(value) ? value : [value]))
+        .filter((value): value is string => typeof value === 'string');
+      if (fieldErrors.length > 0) {
+        errorText = fieldErrors.join(' ');
+      }
     } else if (typeof message === 'string') {
       errorText = message;
 

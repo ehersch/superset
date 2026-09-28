@@ -17,6 +17,7 @@
  * under the License.
  */
 import {
+  createStore,
   fireEvent,
   render,
   screen,
@@ -24,6 +25,7 @@ import {
   waitFor,
 } from 'spec/helpers/testing-library';
 import fetchMock from 'fetch-mock';
+import reducerIndex from 'spec/helpers/reducerIndex';
 import * as ColorSchemeSelect from 'src/dashboard/components/ColorSchemeSelect';
 import * as SupersetCore from '@superset-ui/core';
 import { isFeatureEnabled, FeatureFlag } from '@superset-ui/core';
@@ -581,6 +583,47 @@ describe('PropertiesModal', () => {
     const putBody = JSON.parse(putRequest.body as string);
     expect(putBody.certified_by).toBe('John Doe');
     expect(putBody.certification_details).toBe('Sample certification');
+  });
+
+  test('renders the slug validation error when the slug is already taken', async () => {
+    const saved = jest.spyOn(dashboardInfoActions, 'dashboardSaveSucceeded');
+    const put = jest.spyOn(SupersetCore.SupersetClient, 'put');
+    put.mockRejectedValue(
+      new Response(
+        JSON.stringify({
+          message: { slug: ['A dashboard with this slug already exists'] },
+        }),
+        { status: 422, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    mockedIsFeatureEnabled.mockReturnValue(false);
+    const props = createProps();
+    const propsWithDashboardInfo = {
+      ...props,
+      dashboardInfo: {
+        ...dashboardInfo,
+        json_metadata: mockedJsonMetadata,
+      },
+    };
+    const store = createStore({}, reducerIndex);
+    render(<PropertiesModal {...propsWithDashboardInfo} />, { store });
+    await screen.findByTestId('dashboard-edit-properties-form');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    const toasts = () =>
+      (
+        store.getState() as unknown as {
+          messageToasts: { toastType: string; text: string }[];
+        }
+      ).messageToasts;
+    await waitFor(() => {
+      expect(toasts()).toHaveLength(1);
+    });
+    expect(toasts()[0].toastType).toBe('DANGER_TOAST');
+    expect(toasts()[0].text).toBe('A dashboard with this slug already exists');
+    expect(saved).not.toHaveBeenCalled();
+    expect(props.onHide).not.toHaveBeenCalled();
   });
 
   test('submitting with onlyApply:true', async () => {
