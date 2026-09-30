@@ -1,7 +1,7 @@
 # Devin remediation pipeline — run report
 
 Repository: `ehersch/superset`  
-Generated: 2026-09-30T12:36:35+00:00  
+Generated: 2026-09-30T18:06:06+00:00  
 Tracked issues: 16 (13 fixed, 2 needs_human, 1 not_reproducible)
 
 ## Scoreboard
