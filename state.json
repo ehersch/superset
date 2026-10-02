@@ -477,15 +477,15 @@
           "session_id": "devin-12b4c16090f642a29a60d6fc7a67fc82",
           "session_url": "https://app.devin.ai/sessions/12b4c16090f642a29a60d6fc7a67fc82",
           "created_at": "2026-10-02T16:47:14+00:00",
-          "status": "working",
-          "pr_url": null,
-          "outcome": null,
-          "summary": null,
-          "verification": null,
-          "blockers": null,
+          "status": "finished",
+          "pr_url": "https://github.com/ehersch/superset/pull/47",
+          "outcome": "fixed",
+          "summary": "Added a scoped npm override (texture-compressor -> image-size ^2.0.4), which updates the lockfile from image-size 0.7.5 to 2.0.4 and clears GHSA-w3rx-r6r6-pgpr and the whole @deck.gl/mesh-layers -> @loaders.gl/gltf/@luma.gl/gltf -> @loaders.gl/textures -> texture-compressor -> image-size chain. The issue's named target (@deck.gl/mesh-layers@8.6.5) is a semver-major downgrade from the installed 9.2.6, needs @deck.gl/core ^8, and conflicts with the repo's ~9.2.5 deck.gl/luma.gl overrides, so I fixed the root package instead.",
+          "verification": "Repro (npm 11.13.0, as engines requires): `npm audit --package-lock-only --json` before reported @deck.gl/mesh-layers, @loaders.gl/gltf, @loaders.gl/textures, @luma.gl/gltf, image-size and texture-compressor all as high; totals {low:1,moderate:6,high:19,critical:3,total:29}. The issue's literal jq filter (`.value.fixAvailable.name == \"\"`) fails with 'Cannot index boolean with string \"name\"', so I listed the packages with an equivalent filter. (1) After the fix, `npm audit --package-lock-only --json` reports none of those 6 packages; totals {low:1,moderate:8,high:11,critical:3,total:23}. (2) A sorted diff of package names and severities, before vs after, shows no new advisories. The only changes are removals plus @deck.gl/geo-layers and @loaders.gl/3d-tiles dropping from high to moderate (their existing zip/compression advisories). (3) `npm run build`: webpack 5.111.0 compiled with 4 warnings, BUILD_EXIT 0. (4) `npx jest plugins/preset-chart-deckgl src/visualizations src/explore/components/controls --max-workers=3 --silent`: 127 of 127 suites passed, 1316 tests passed, 1 skipped, exit 0. `pre-commit run` on the staged diff passed. CI: 48 checks passed (frontend-build, all 8 sharded-jest-tests shards, lint-frontend, docker-build, cypress, playwright); 1 failed. The failure is dependency-review, which errors with 'Dependency review is not supported on this repository' because the fork has the Dependency graph disabled, so it is not caused by this diff.",
+          "blockers": "",
           "ci_retries": 0,
-          "finished_at": null,
-          "result_digest": null
+          "finished_at": "2026-10-02T21:14:57+00:00",
+          "result_digest": "2fb680e501ff8833cbe9e62d88b313fdde701722098f79b5212c9875e96129e0"
         }
       ],
       "escalated": false
