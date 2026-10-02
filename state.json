@@ -414,6 +414,56 @@
         }
       ],
       "escalated": true
+    },
+    "44": {
+      "issue_number": 44,
+      "fingerprint": "2b8f6e916a978b31",
+      "detector": "osv_python",
+      "wave": "A",
+      "title": "security(deps): urllib3 2.7.0 is affected by 3 advisory(ies)",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-5dd83cb4671841e1b911914e9a010cee",
+          "session_url": "https://app.devin.ai/sessions/5dd83cb4671841e1b911914e9a010cee",
+          "created_at": "2026-10-02T12:36:59+00:00",
+          "status": "working",
+          "pr_url": null,
+          "outcome": null,
+          "summary": null,
+          "verification": null,
+          "blockers": null,
+          "ci_retries": 0,
+          "finished_at": null,
+          "result_digest": null
+        }
+      ],
+      "escalated": false
+    },
+    "43": {
+      "issue_number": 43,
+      "fingerprint": "46401f49f89f1290",
+      "detector": "osv_python",
+      "wave": "A",
+      "title": "security(deps): pyjwt 2.14.0 is affected by 1 advisory(ies)",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-1adf0b55cd474dd29df7bc7b8d256d19",
+          "session_url": "https://app.devin.ai/sessions/1adf0b55cd474dd29df7bc7b8d256d19",
+          "created_at": "2026-10-02T12:37:03+00:00",
+          "status": "working",
+          "pr_url": null,
+          "outcome": null,
+          "summary": null,
+          "verification": null,
+          "blockers": null,
+          "ci_retries": 0,
+          "finished_at": null,
+          "result_digest": null
+        }
+      ],
+      "escalated": false
     }
   }
 }
