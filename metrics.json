@@ -1,13 +1,13 @@
 {
-  "issues_tracked": 18,
-  "dispatched": 19,
-  "in_flight": 2,
-  "settled": 17,
-  "fixed_with_pr": 14,
+  "issues_tracked": 19,
+  "dispatched": 20,
+  "in_flight": 1,
+  "settled": 19,
+  "fixed_with_pr": 16,
   "escalated": 3,
   "not_reproducible": 1,
-  "autonomous_resolution_rate": 0.824,
+  "autonomous_resolution_rate": 0.842,
   "ci_retries_spent": 0,
   "sessions_needing_ci_retry": 0,
-  "median_minutes_to_settle": 22.8
+  "median_minutes_to_settle": 23.7
 }
