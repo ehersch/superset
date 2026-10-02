@@ -1,16 +1,16 @@
 # Devin remediation pipeline — run report
 
 Repository: `ehersch/superset`  
-Generated: 2026-10-02T11:23:18+00:00  
-Tracked issues: 16 (13 fixed, 2 needs_human, 1 not_reproducible)
+Generated: 2026-10-02T12:37:08+00:00  
+Tracked issues: 18 (13 fixed, 2 needs_human, 1 not_reproducible, 2 working)
 
 ## Scoreboard
 
 | Metric | Value |
 | --- | --- |
-| Issues tracked | 16 |
-| Sessions dispatched | 17 |
-| In flight | 0 |
+| Issues tracked | 18 |
+| Sessions dispatched | 19 |
+| In flight | 2 |
 | Fixed with a PR | 14 |
 | Escalated to a human | 3 |
 | Not reproducible | 1 |
@@ -39,3 +39,5 @@ Tracked issues: 16 (13 fixed, 2 needs_human, 1 not_reproducible)
 | [#15](https://github.com/ehersch/superset/issues/15) | C | `upstream_mirror` | [`devin-604f53`](https://app.devin.ai/sessions/604f531e415c4bf0a24c6e0892478449) | 1 | 0 | fixed | https://github.com/ehersch/superset/pull/29 |
 | [#16](https://github.com/ehersch/superset/issues/16) | C | `upstream_mirror` | [`devin-785ee4`](https://app.devin.ai/sessions/785ee42f3da84b688e58677b468dc49f) | 1 | 0 | fixed | https://github.com/ehersch/superset/pull/30 |
 | [#18](https://github.com/ehersch/superset/issues/18) | C | `upstream_mirror` | [`devin-6e65c7`](https://app.devin.ai/sessions/6e65c777ca564dfc91f805e77833db1c) | 2 | 0 | fixed | https://github.com/ehersch/superset/pull/40 |
+| [#43](https://github.com/ehersch/superset/issues/43) | A | `osv_python` | [`devin-1adf0b`](https://app.devin.ai/sessions/1adf0b55cd474dd29df7bc7b8d256d19) | 1 | 0 | working | — |
+| [#44](https://github.com/ehersch/superset/issues/44) | A | `osv_python` | [`devin-5dd83c`](https://app.devin.ai/sessions/5dd83cb4671841e1b911914e9a010cee) | 1 | 0 | working | — |
