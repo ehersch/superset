@@ -26,10 +26,7 @@
 name: devin-pipeline / dispatch
 
 on:
-  issues:
-    types: [opened, labeled]
-  schedule:
-    - cron: "*/15 * * * *"
+  # Paused: automatic triggers removed so no Devin sessions are created.
   workflow_dispatch:
 
 permissions:
