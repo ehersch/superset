@@ -532,6 +532,30 @@ def test_number_format_branch_coverage(
     assert format_number_with_config(d3_format, None, value) == expected
 
 
+@pytest.mark.parametrize(
+    "d3_format,value,expected",
+    [
+        (",.2f", -0.001, "0.00"),
+        (".2f", -0.004, "0.00"),
+        ("$,.2f", -0.001, "$0.00"),
+        ("(,.2f", -0.001, "0.00"),
+        (".1%", -0.0001, "0.0%"),
+        ("d", -0.4, "0"),
+        # d3 keeps the sign in the explicit "+" mode
+        ("+.2f", -0.001, "-0.00"),
+        # values that do not round to zero keep their sign
+        (",.2f", -0.005, "-0.01"),
+        (",.2f", -1.234, "-1.23"),
+        ("$,.2f", -1234.5, "-$1,234.50"),
+        ("(,.2f", -1.234, "(1.23)"),
+    ],
+)
+def test_negative_value_rounding_to_zero_drops_the_sign(
+    d3_format: str, value: float, expected: str
+) -> None:
+    assert format_number_with_config(d3_format, None, value) == expected
+
+
 def test_default_helper_and_whole_float_fallback() -> None:
     assert format_default(1000, ",") == "1,000"
     assert format_number_with_config(None, None, 42.0) == "42"

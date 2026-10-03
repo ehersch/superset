@@ -263,9 +263,13 @@ def format_d3(d3_format: str, value: float) -> str:
         type_, abs(value), precision, trim, comma, d3_format
     )
 
+    signed_value = value
+    if value < 0 and sign_mode != "+" and magnitude_rounds_to_zero(formatted):
+        signed_value = abs(value)
+
     if currency_symbol:
         formatted = f"${formatted}"
-    return apply_sign(formatted, value, sign_mode)
+    return apply_sign(formatted, signed_value, sign_mode)
 
 
 def format_d3_magnitude(
@@ -319,6 +323,22 @@ def format_d3_magnitude(
     else:
         raise ValueError(d3_format)
     return trim_trailing_zeros(formatted) if trim else formatted
+
+
+def magnitude_rounds_to_zero(formatted: str) -> bool:
+    """
+    Return whether a formatted magnitude is zero at its rendered precision.
+
+    Mirrors the ``+value === 0`` check in ``d3-format/src/locale.js``, which
+    suppresses a sign that carries no information (``-0.00``). Any grouping
+    separators are dropped and any unit suffix (``%``, an SI prefix) is ignored.
+    """
+    match = re.match(r"[\d,.]*", formatted)
+    numeric = (match.group() if match else "").replace(",", "")
+    try:
+        return float(numeric) == 0
+    except ValueError:
+        return False
 
 
 def apply_sign(formatted: str, value: float, sign_mode: str) -> str:
