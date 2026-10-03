@@ -54,6 +54,36 @@ logger = logging.getLogger(__name__)
 _SSH_KEY_TYPES: tuple[type[PKey], ...] = (Ed25519Key, ECDSAKey, RSAKey)
 
 
+class _UnsupportedDSSKey(PKey):
+    """Placeholder for ``paramiko.DSSKey`` on paramiko releases that dropped DSA.
+
+    ``sshtunnel.SSHTunnelForwarder.get_keys`` and ``read_private_key_file``
+    reference ``paramiko.DSSKey`` unconditionally, so constructing any tunnel
+    fails with ``AttributeError`` once the attribute is gone. This class only
+    exists so that lookup succeeds; every attempt to actually build a key raises
+    ``SSHException``, which sshtunnel treats as "not this key type" and skips.
+    DSA keys are therefore rejected rather than silently accepted.
+    """
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        raise SSHException("DSA (ssh-dss) keys are not supported by this paramiko")
+
+
+def install_paramiko_dsskey_shim() -> bool:
+    """Define ``paramiko.DSSKey`` when the installed paramiko lacks it.
+
+    Returns ``True`` if the placeholder was installed, ``False`` if paramiko
+    already provides ``DSSKey`` and nothing was changed.
+    """
+    if hasattr(paramiko, "DSSKey"):
+        return False
+    paramiko.DSSKey = _UnsupportedDSSKey  # type: ignore[attr-defined]
+    return True
+
+
+install_paramiko_dsskey_shim()
+
+
 def _load_private_key(pem: str, password: str | None) -> PKey:
     """Load a private key PEM regardless of algorithm (ed25519, ECDSA, RSA).
 

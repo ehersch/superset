@@ -14,6 +14,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+from io import StringIO
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import paramiko
@@ -41,7 +43,12 @@ from paramiko import (
 from superset.commands.database.ssh_tunnel.exceptions import (
     SSHTunnelHostKeyVerificationError,
 )
-from superset.extensions.ssh import SSHManager, SSHManagerFactory
+from superset.extensions.ssh import (
+    _UnsupportedDSSKey,
+    install_paramiko_dsskey_shim,
+    SSHManager,
+    SSHManagerFactory,
+)
 
 
 def _make_manager(strict: bool = False) -> SSHManager:
@@ -99,6 +106,67 @@ def test_ssh_tunnel_timeout_setting() -> None:
     factory.init_app(app)
     assert sshtunnel.TUNNEL_TIMEOUT == 123.0
     assert sshtunnel.SSH_TIMEOUT == 321.0
+
+
+def test_dsskey_shim_is_noop_when_paramiko_provides_dsskey() -> None:
+    """If paramiko itself exposes ``DSSKey`` the shim must leave it untouched."""
+    sentinel = type("RealDSSKey", (paramiko.PKey,), {})
+    with patch.dict(vars(paramiko), {"DSSKey": sentinel}):
+        assert install_paramiko_dsskey_shim() is False
+        assert vars(paramiko)["DSSKey"] is sentinel
+
+
+def test_dsskey_shim_installs_placeholder_when_absent() -> None:
+    """Without ``paramiko.DSSKey`` the shim installs a non-loadable placeholder."""
+    namespace = vars(paramiko)
+    with patch.dict(namespace):
+        namespace.pop("DSSKey")
+        assert install_paramiko_dsskey_shim() is True
+        dss_key = namespace["DSSKey"]
+        assert dss_key is _UnsupportedDSSKey
+        # DSA material must be rejected, never parsed into a usable key.
+        with pytest.raises(SSHException):
+            dss_key.from_private_key(StringIO("-----BEGIN DSA PRIVATE KEY-----"))
+        with pytest.raises(SSHException):
+            dss_key()
+
+
+def test_sshtunnel_get_keys_and_forwarder_work_without_native_dsskey(
+    tmp_path: Path,
+) -> None:
+    """
+    ``sshtunnel.SSHTunnelForwarder`` references ``paramiko.DSSKey`` when it
+    scans ``~/.ssh`` and when it loads key files; on paramiko>=4 (which removed
+    DSA) the shim must keep both paths working while skipping ``id_dsa``.
+    """
+    (tmp_path / "id_dsa").write_text("-----BEGIN DSA PRIVATE KEY-----\nbogus\n")
+    ed25519_pem = _make_ed25519_pem()
+    (tmp_path / "id_ed25519").write_text(ed25519_pem)
+
+    namespace = vars(paramiko)
+    with patch.dict(namespace):
+        namespace.pop("DSSKey")
+        install_paramiko_dsskey_shim()
+
+        keys = sshtunnel.SSHTunnelForwarder.get_keys(
+            host_pkey_directories=[str(tmp_path)], allow_agent=False
+        )
+        assert [type(key) for key in keys] == [Ed25519Key]
+
+        assert (
+            sshtunnel.SSHTunnelForwarder.read_private_key_file(str(tmp_path / "id_dsa"))
+            is None
+        )
+
+        forwarder = sshtunnel.SSHTunnelForwarder(
+            ("ssh.example.com", 22),
+            ssh_username="tunneluser",
+            ssh_password="secret",  # noqa: S106
+            remote_bind_address=("db.internal", 5432),
+            host_pkey_directories=[str(tmp_path)],
+            allow_agent=False,
+        )
+        assert forwarder.ssh_password == "secret"  # noqa: S105
 
 
 def _make_ed25519_pem() -> str:
