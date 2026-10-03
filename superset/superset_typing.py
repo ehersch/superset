@@ -282,6 +282,7 @@ class ExplorableData(TypedDict, total=False):
         folders: Folder structure (JSON field)
         order_by_choices: Available ordering options
         editors: List of editor IDs or editor details
+        extra_editors: Editor subject IDs granted via EXTRA_EDITORS_RESOLVER
         verbose_map: Mapping of column/metric names to verbose names
         select_star: SELECT * query for this datasource
 
@@ -328,6 +329,7 @@ class ExplorableData(TypedDict, total=False):
     folders: Any  # JSON field, can be list or dict
     order_by_choices: list[tuple[str, str]]
     editors: list[int] | list[dict[str, Any]]  # Can be either format
+    extra_editors: list[int]
     verbose_map: dict[str, str]
     select_star: str | None
 

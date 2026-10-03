@@ -5618,6 +5618,13 @@
             "description": "JSON string containing extra configuration elements.",
             "type": "object"
           },
+          "extra_editors": {
+            "description": "Editor subject IDs granted via EXTRA_EDITORS_RESOLVER.",
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
           "fetch_values_predicate": {
             "description": "Predicate used when fetching values from the dataset.",
             "type": "string"

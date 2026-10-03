@@ -52,6 +52,8 @@ from superset.models.helpers import (
     validate_rendered_expression,
 )
 from superset.sql.parse import Table
+from superset.subjects.models import Subject
+from superset.subjects.types import SubjectType
 from superset.superset_typing import AdhocMetric, QueryObjectDict
 from superset.utils import json
 
@@ -1513,6 +1515,33 @@ def test_sqla_table_data_includes_currency_code_column(mocker: MockerFixture) ->
     data = table.data
     assert data["currency_code_column"] == "currency_code"
     assert data["main_dttm_col"] == "ds"
+
+
+def test_sqla_table_data_includes_editors(mocker: MockerFixture) -> None:
+    """
+    The Explore payload carries the dataset's editors (and any resolver-granted
+    extra editors) so the frontend can enable "Edit dataset" for non-Admins.
+    """
+    database = mocker.MagicMock()
+    mocker.patch.object(SqlaTable, "columns", [])
+    mocker.patch.object(SqlaTable, "metrics", [])
+    mocker.patch(
+        "superset.connectors.sqla.models.get_extra_editor_subject_ids",
+        return_value=[7],
+    )
+
+    table = SqlaTable(table_name="sales", database=database)
+    table.editors = [
+        Subject(id=3, type=SubjectType.USER, label="alice", user_id=10),
+        Subject(id=4, type=SubjectType.ROLE, label="Alpha", role_id=2),
+    ]
+
+    data = table.data
+    assert data["editors"] == [
+        {"id": 3, "label": "alice", "type": SubjectType.USER},
+        {"id": 4, "label": "Alpha", "type": SubjectType.ROLE},
+    ]
+    assert data["extra_editors"] == [7]
 
 
 def test_sqla_table_link_escapes_url(mocker: MockerFixture) -> None:
