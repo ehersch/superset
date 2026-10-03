@@ -22,8 +22,8 @@
 name: devin-pipeline / ci-feedback
 
 on:
-  check_suite:
-    types: [completed]
+  # Paused: automatic triggers removed so no Devin sessions are messaged.
+  workflow_dispatch:
 
 permissions:
   contents: write

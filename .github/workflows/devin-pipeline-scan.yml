@@ -31,8 +31,7 @@
 name: devin-pipeline / scan
 
 on:
-  schedule:
-    - cron: "17 6 * * *"
+  # Paused: nightly schedule removed so no Devin sessions are created.
   workflow_dispatch:
     inputs:
       only:
