@@ -366,6 +366,9 @@
     "regenerator-runtime": "^0.14.1"
   },
   "overrides": {
+    "@babel/cli": {
+      "chokidar": "^4.0.3"
+    },
     "@babel/eslint-parser": {
       "eslint": "$eslint"
     },
