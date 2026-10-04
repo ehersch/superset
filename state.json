@@ -489,6 +489,81 @@
         }
       ],
       "escalated": false
+    },
+    "50": {
+      "issue_number": 50,
+      "fingerprint": "22283bbd30730fbf",
+      "detector": "osv_python",
+      "wave": "A",
+      "title": "security(deps): geopy 2.4.1 is affected by 1 advisory(ies)",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-0c721390751f4c0c91dc372908453d3c",
+          "session_url": "https://app.devin.ai/sessions/0c721390751f4c0c91dc372908453d3c",
+          "created_at": "2026-10-04T12:33:09+00:00",
+          "status": "working",
+          "pr_url": null,
+          "outcome": null,
+          "summary": null,
+          "verification": null,
+          "blockers": null,
+          "ci_retries": 0,
+          "finished_at": null,
+          "result_digest": null
+        }
+      ],
+      "escalated": false
+    },
+    "49": {
+      "issue_number": 49,
+      "fingerprint": "e3e6bb921f37cb55",
+      "detector": "npm_audit",
+      "wave": "A",
+      "title": "security(frontend): upgrade to @pmmmwh/react-refresh-webpack-plugin@0.3.0 to clear 1 advisory chain package(s)",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-8a588579419b490fab2470c2ec104703",
+          "session_url": "https://app.devin.ai/sessions/8a588579419b490fab2470c2ec104703",
+          "created_at": "2026-10-04T12:33:12+00:00",
+          "status": "working",
+          "pr_url": null,
+          "outcome": null,
+          "summary": null,
+          "verification": null,
+          "blockers": null,
+          "ci_retries": 0,
+          "finished_at": null,
+          "result_digest": null
+        }
+      ],
+      "escalated": false
+    },
+    "48": {
+      "issue_number": 48,
+      "fingerprint": "023b7aaa12ee4749",
+      "detector": "npm_audit",
+      "wave": "A",
+      "title": "security(frontend): upgrade to @babel/cli@8.0.6 to clear 2 advisory chain package(s)",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-616d70ec850b4ad59a477bb0301c15b8",
+          "session_url": "https://app.devin.ai/sessions/616d70ec850b4ad59a477bb0301c15b8",
+          "created_at": "2026-10-04T12:33:14+00:00",
+          "status": "working",
+          "pr_url": null,
+          "outcome": null,
+          "summary": null,
+          "verification": null,
+          "blockers": null,
+          "ci_retries": 0,
+          "finished_at": null,
+          "result_digest": null
+        }
+      ],
+      "escalated": false
     }
   }
 }
