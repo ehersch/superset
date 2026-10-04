@@ -502,15 +502,15 @@
           "session_id": "devin-0c721390751f4c0c91dc372908453d3c",
           "session_url": "https://app.devin.ai/sessions/0c721390751f4c0c91dc372908453d3c",
           "created_at": "2026-10-04T12:33:09+00:00",
-          "status": "working",
-          "pr_url": null,
-          "outcome": null,
-          "summary": null,
-          "verification": null,
-          "blockers": null,
+          "status": "finished",
+          "pr_url": "https://github.com/ehersch/superset/pull/53",
+          "outcome": "fixed",
+          "summary": "Bumped the geopy pin from 2.4.1 to 2.5.0 in requirements/base.txt and requirements/development.txt (the only files pinning it; pyproject.toml lists geopy unversioned). 2.4.1 is affected by GHSA-mhvh-fq92-pfmr (ReDoS in geopy.Point) and 2.5.0 is the OSV-reported fixed release.",
+          "verification": "1) Repro before change: `python -m devin_pipeline.pipeline.cli --dry-run detect --only osv_python` -> 4 findings incl. `[high] 22283bbd30730fbf security(deps): geopy 2.4.1 is affected by 1 advisory(ies)`. After change: same command -> 3 findings (paramiko, pyjwt, urllib3), geopy absent. `curl -s https://api.osv.dev/v1/query -d '{\"package\":{\"name\":\"geopy\",\"ecosystem\":\"PyPI\"},\"version\":\"2.5.0\"}'` -> `{}` (no vulns). 2) `grep -rln \"geopy==\" requirements/` -> requirements/base.txt, requirements/development.txt, both now `geopy==2.5.0`; geographiclib==2.0 is unchanged and still satisfies geopy 2.5.0. 3) `.venv/bin/pip install geopy==2.5.0 && .venv/bin/python -m pytest tests/unit_tests -q` -> `18293 passed, 38 skipped, 2 xfailed in 1369.92s`, exit 0. `pre-commit run` on the staged diff -> all hooks Passed/Skipped. PR CI: 63 passed; only `dependency-review` failed, with 'Dependency review is not supported on this repository' (Dependency graph is disabled on the fork, so it fails on every PR and has nothing to do with this diff).",
+          "blockers": "",
           "ci_retries": 0,
-          "finished_at": null,
-          "result_digest": null
+          "finished_at": "2026-10-04T17:04:10+00:00",
+          "result_digest": "7c93a7343e229cc6e3c783a1f7102c68dee94ee38bfe4b5abc8aec0948a18f32"
         }
       ],
       "escalated": false
@@ -527,18 +527,18 @@
           "session_id": "devin-8a588579419b490fab2470c2ec104703",
           "session_url": "https://app.devin.ai/sessions/8a588579419b490fab2470c2ec104703",
           "created_at": "2026-10-04T12:33:12+00:00",
-          "status": "working",
+          "status": "finished",
           "pr_url": null,
-          "outcome": null,
-          "summary": null,
-          "verification": null,
-          "blockers": null,
+          "outcome": "needs_human",
+          "summary": "No changes were retained on devin/fix-e3e6bb921f37cb55 because the requested 0.3.0 downgrade fails normal dependency resolution and both audit criteria. An isolated candidate passed the production build and four related Jest tests, but still flags the plugin as high severity and introduces a new high-severity ansi-html advisory.",
+          "verification": "Original commands ran in /home/ubuntu/repos/superset/superset-frontend. Experimental candidate commands ran in a detached master worktree at /home/ubuntu/.devin-files/issue49-candidate/superset-frontend, not on the requested branch.\n\nREPRODUCTION:\nnpm audit --package-lock-only --json | jq '.vulnerabilities | with_entries(select(.value.fixAvailable.name == \"\"))'\nResult: exit 5; jq: Cannot index boolean with string \"name\".\nnpm audit --package-lock-only --json | jq '{auditVersion: .auditReportVersion, target: .vulnerabilities[\"@pmmmwh/react-refresh-webpack-plugin\"], counts: .metadata.vulnerabilities}'\nResult: reported plugin severity high, via webpack-dev-server, vulnerable range >=0.3.1, suggested fix 0.3.0. Baseline 43 vulnerable packages: 33 high, 3 critical, 6 moderate, 1 low.\n\nINSTALLABILITY:\nnpm install --package-lock-only --ignore-scripts --save-dev --save-exact @pmmmwh/react-refresh-webpack-plugin@0.3.0\nnpx --yes npm@11.13.0 install --package-lock-only --ignore-scripts --save-dev --save-exact @pmmmwh/react-refresh-webpack-plugin@0.3.0\nResult: both exit 1 ERESOLVE; required peer react-refresh ^0.8.1 conflicts with 0.19.0.\nIsolated experiment ONLY:\nnpx --yes npm@11.13.0 install --package-lock-only --ignore-scripts --legacy-peer-deps --save-dev --save-exact @pmmmwh/react-refresh-webpack-plugin@0.3.0\nnpx --yes npm@11.13.0 ci --legacy-peer-deps --no-audit --no-fund\nResult: both exit 0. Temporary peer-resolution bypass used solely to evaluate the unsafe candidate; not retained in the requested branch.\n\nCRITERION 1 \u2014 FAIL:\nnpm audit --package-lock-only > /home/ubuntu/.devin-files/issue49-candidate-audit.txt 2>&1\nResult: exit 1; plugin still high, now via ansi-html <0.0.8. Audit suggests returning to plugin 0.6.3.\njq -e '.vulnerabilities[\"@pmmmwh/react-refresh-webpack-plugin\"] == null' /home/ubuntu/.devin-files/issue49-candidate-audit.json\nResult: false, exit 1.\n\nCRITERION 2 \u2014 FAIL:\nBaseline: npx --yes npm@11.13.0 audit --package-lock-only --json > /home/ubuntu/.devin-files/issue49-baseline-audit.json\nCandidate: npx --yes npm@11.13.0 audit --package-lock-only --json > /home/ubuntu/.devin-files/issue49-candidate-audit.json\nResult: both exit 1; high count 33 -> 34, critical count remains 3.\njq -e -n --slurpfile baseline /home/ubuntu/.devin-files/issue49-baseline-audit.json --slurpfile candidate /home/ubuntu/.devin-files/issue49-candidate-audit.json 'def high_advisories: [.vulnerabilities[].via[] | select(type == \"object\") | select(.severity == \"high\" or .severity == \"critical\") | .url] | unique; (($candidate[0] | high_advisories) - ($baseline[0] | high_advisories)) as $added | {new_high_or_critical: $added, passed: ($added | length == 0)} | .passed'\nResult: false, exit 1. Advisory-set inspection found new high https://github.com/advisories/GHSA-whgm-jr23-g3j9 (CVSS 7.5).\n\nCRITERION 3 \u2014 PASS ON ISOLATED CANDIDATE:\nCI=true npm run build\nResult: exit 0; webpack 5.111.0 compiled with 4 warnings in 37413 ms.\n\nCRITERION 4 \u2014 RELATED JEST SUITE PASS; NO DIRECT PLUGIN SUITE FOUND:\nrg -n 'react-refresh-webpack-plugin|ReactRefreshWebpackPlugin|react-refresh' src spec tools packages plugins --glob '*test*' --glob '*spec*'\nResult: no matches.\nCI=true NODE_ENV=test npx --no-install jest --runInBand --runTestsByPath tools/webpack.proxy-config.test.js\nResult: exit 0; 1 suite, 4 tests passed.\n\nSUPPLEMENTAL DEVELOPMENT CHECK:\nCI=true npm run build-dev\nResult: exit 2; React-refresh reports Hot Module Replacement (HMR) is not enabled. No claim that this is a regression was made without a baseline development-build comparison.\n\nCLEAN REQUESTED BRANCH:\ngit status --short --branch\ngit diff --exit-code\ngit diff --cached --exit-code\nResult: branch devin/fix-e3e6bb921f37cb55, no changes; both diff checks exit 0. No commit, push, or PR was made.",
+          "blockers": "Authorize a different fix target/dependency scope to investigate the underlying braces -> micromatch -> http-proxy-middleware -> webpack-dev-server advisory chain, or reject the proposed 0.3.0 downgrade. The requested version requires react-refresh ^0.8.1 rather than the fork's 0.19.0 and adds GHSA-whgm-jr23-g3j9; there is no useful safe partial change to open as a draft PR. No direct React Refresh Jest suite was found; the closest related webpack proxy suite was run.",
           "ci_retries": 0,
-          "finished_at": null,
-          "result_digest": null
+          "finished_at": "2026-10-04T17:04:12+00:00",
+          "result_digest": "6b0a2797899f6d18c9cc978ce2435234ff8846ff49771cd58de6255a8ed63029"
         }
       ],
-      "escalated": false
+      "escalated": true
     },
     "48": {
       "issue_number": 48,
@@ -552,15 +552,15 @@
           "session_id": "devin-616d70ec850b4ad59a477bb0301c15b8",
           "session_url": "https://app.devin.ai/sessions/616d70ec850b4ad59a477bb0301c15b8",
           "created_at": "2026-10-04T12:33:14+00:00",
-          "status": "working",
-          "pr_url": null,
-          "outcome": null,
-          "summary": null,
-          "verification": null,
-          "blockers": null,
+          "status": "finished",
+          "pr_url": "https://github.com/ehersch/superset/pull/54",
+          "outcome": "fixed",
+          "summary": "Added a scoped npm override (`\"@babel/cli\": {\"chokidar\": \"^4.0.3\"}`) so @babel/cli 7 uses chokidar 4, which drops the vulnerable chokidar 3 \u2192 braces chain and clears both the @babel/cli and chokidar audit findings. The suggested @babel/cli@8.0.6 has a peer dependency on @babel/core@^8, which would mean migrating the whole Babel toolchain, so this PR fixes the root advisory instead; braces itself is still reported through stylelint\u2192micromatch because no patched braces release exists.",
+          "verification": "Repro (before): `npm audit --package-lock-only --json` \u2192 @babel/cli high (via chokidar), chokidar high (via braces GHSA-vfj7-8cjw-p6xm), fixAvailable @babel/cli@8.0.6; totals 43 (high 33, critical 3). The issue's jq errors with 'Cannot index boolean' because some fixAvailable values are booleans. After: `npm audit --package-lock-only --json` \u2192 totals 41 (high 31, critical 3, moderate 6, low 1). Diff of key+severity lists before vs after: only `@babel/cli high` and `chokidar high` removed, nothing added. `npm ls chokidar` \u2192 @babel/cli@7.29.7 overridden \u2192 chokidar@4.0.3. `npm run build` \u2192 webpack compiled with 4 warnings, exit 0. `PATH=$PWD/node_modules/.bin:$PATH node scripts/build.js plugin-chart-word-cloud` (babel CLI over 21 packages) \u2192 exit 0, 42 'Successfully compiled'. `babel --watch` smoke test recompiled on file change through chokidar 4. `npx jest plugins/plugin-chart-word-cloud packages/superset-core` \u2192 14 suites, 160 tests passed. `pre-commit run` on the staged diff \u2192 all hooks passed. PR CI: 48 passed, including all 8 sharded-jest-tests shards, frontend-build, lint-frontend, cypress, playwright and pre-commit. The only failure is dependency-review: 'Dependency review is not supported on this repository', a known fork limitation because the dependency graph is disabled.",
+          "blockers": "",
           "ci_retries": 0,
-          "finished_at": null,
-          "result_digest": null
+          "finished_at": "2026-10-04T17:04:14+00:00",
+          "result_digest": "fa40183b955cc0654ddb9e470bac2dee66a29aaa0b3269a3930f615d1191765c"
         }
       ],
       "escalated": false
