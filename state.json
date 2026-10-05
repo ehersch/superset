@@ -564,6 +564,31 @@
         }
       ],
       "escalated": false
+    },
+    "52": {
+      "issue_number": 52,
+      "fingerprint": "5ae296632848d2c5",
+      "detector": "npm_audit",
+      "wave": "A",
+      "title": "security(frontend): upgrade to stylelint@7.7.0 to clear 5 advisory chain package(s)",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-00fe28f6393247929d16188c4f99992d",
+          "session_url": "https://app.devin.ai/sessions/00fe28f6393247929d16188c4f99992d",
+          "created_at": "2026-10-05T18:51:45+00:00",
+          "status": "working",
+          "pr_url": null,
+          "outcome": null,
+          "summary": null,
+          "verification": null,
+          "blockers": null,
+          "ci_retries": 0,
+          "finished_at": null,
+          "result_digest": null
+        }
+      ],
+      "escalated": false
     }
   }
 }
