@@ -1,8 +1,8 @@
 # Devin remediation pipeline — run report
 
 Repository: `ehersch/superset`  
-Generated: 2026-10-05T18:51:49+00:00  
-Tracked issues: 23 (18 fixed, 3 needs_human, 1 not_reproducible, 1 working)
+Generated: 2026-10-06T00:43:15+00:00  
+Tracked issues: 23 (18 fixed, 4 needs_human, 1 not_reproducible)
 
 ## Scoreboard
 
@@ -10,14 +10,14 @@ Tracked issues: 23 (18 fixed, 3 needs_human, 1 not_reproducible, 1 working)
 | --- | --- |
 | Issues tracked | 23 |
 | Sessions dispatched | 24 |
-| In flight | 1 |
+| In flight | 0 |
 | Fixed with a PR | 19 |
-| Escalated to a human | 4 |
+| Escalated to a human | 5 |
 | Not reproducible | 1 |
-| Autonomous resolution rate | 83% |
+| Autonomous resolution rate | 79% |
 | Sessions needing a CI retry | 0 |
 | CI retries spent | 0 |
-| Median minutes to settle | 41.6 |
+| Median minutes to settle | 75.9 |
 
 ## Per-issue ledger
 
@@ -45,4 +45,4 @@ Tracked issues: 23 (18 fixed, 3 needs_human, 1 not_reproducible, 1 working)
 | [#48](https://github.com/ehersch/superset/issues/48) | A | `npm_audit` | [`devin-616d70`](https://app.devin.ai/sessions/616d70ec850b4ad59a477bb0301c15b8) | 1 | 0 | fixed | https://github.com/ehersch/superset/pull/54 |
 | [#49](https://github.com/ehersch/superset/issues/49) | A | `npm_audit` | [`devin-8a5885`](https://app.devin.ai/sessions/8a588579419b490fab2470c2ec104703) | 1 | 0 | needs_human | — |
 | [#50](https://github.com/ehersch/superset/issues/50) | A | `osv_python` | [`devin-0c7213`](https://app.devin.ai/sessions/0c721390751f4c0c91dc372908453d3c) | 1 | 0 | fixed | https://github.com/ehersch/superset/pull/53 |
-| [#52](https://github.com/ehersch/superset/issues/52) | A | `npm_audit` | [`devin-00fe28`](https://app.devin.ai/sessions/00fe28f6393247929d16188c4f99992d) | 1 | 0 | working | — |
+| [#52](https://github.com/ehersch/superset/issues/52) | A | `npm_audit` | [`devin-00fe28`](https://app.devin.ai/sessions/00fe28f6393247929d16188c4f99992d) | 1 | 0 | needs_human | — |
