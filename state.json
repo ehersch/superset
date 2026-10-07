@@ -589,6 +589,31 @@
         }
       ],
       "escalated": true
+    },
+    "58": {
+      "issue_number": 58,
+      "fingerprint": "6523bd2ae5154a73",
+      "detector": "osv_python",
+      "wave": "A",
+      "title": "security(deps): werkzeug 3.1.6 is affected by 1 advisory(ies)",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-8fb7bb15d6d44b4b9f5e80f1f9727fb0",
+          "session_url": "https://app.devin.ai/sessions/8fb7bb15d6d44b4b9f5e80f1f9727fb0",
+          "created_at": "2026-10-07T13:26:15+00:00",
+          "status": "working",
+          "pr_url": null,
+          "outcome": null,
+          "summary": null,
+          "verification": null,
+          "blockers": null,
+          "ci_retries": 0,
+          "finished_at": null,
+          "result_digest": null
+        }
+      ],
+      "escalated": false
     }
   }
 }
