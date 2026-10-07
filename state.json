@@ -602,6 +602,56 @@
           "session_id": "devin-8fb7bb15d6d44b4b9f5e80f1f9727fb0",
           "session_url": "https://app.devin.ai/sessions/8fb7bb15d6d44b4b9f5e80f1f9727fb0",
           "created_at": "2026-10-07T13:26:15+00:00",
+          "status": "finished",
+          "pr_url": "https://github.com/ehersch/superset/pull/60",
+          "outcome": "fixed",
+          "summary": "Bumped werkzeug from 3.1.6 to 3.1.9 in requirements/base.txt and requirements/development.txt, and raised the security floor in requirements/base.in to werkzeug>=3.1.9,<4.0.0. This fixes GHSA-g6x2-hccm-hh4m, where werkzeug's safe_join() allowed Windows special device names.",
+          "verification": "1) Before the change, `python -m devin_pipeline.pipeline.cli --dry-run detect --only osv_python` listed `6523bd2ae5154a73 security(deps): werkzeug 3.1.6 is affected by 1 advisory(ies)` (6 findings). After the change, the same command no longer lists werkzeug (5 findings: geopy, mako, paramiko, pyjwt, urllib3). Querying OSV directly with `curl -s -X POST https://api.osv.dev/v1/query -d '{\"package\":{\"name\":\"werkzeug\",\"ecosystem\":\"PyPI\"},\"version\":\"3.1.9\"}'` returned `{}`, meaning no advisories. 2) `grep -rn werkzeug requirements/` shows base.txt and development.txt both at `werkzeug==3.1.9` and base.in at `werkzeug>=3.1.9,<4.0.0`. `.venv/bin/pip install werkzeug==3.1.9` installed it, and `pip show werkzeug` reports Version: 3.1.9. 3) `.venv/bin/python -m pytest tests/unit_tests -q` gave `18293 passed, 38 skipped, 2 xfailed in 1190.58s`, exit 0. `git add -u && .venv/bin/pre-commit run` passed or skipped every hook. CI on PR #60: 63 checks passed, including unit-tests and test-postgres/mysql/sqlite. The only failure is `dependency-review`, which errors with 'Dependency review is not supported on this repository. Please ensure that Dependency graph is enabled'; that is a repo-settings problem on this fork and not caused by the diff.",
+          "blockers": "",
+          "ci_retries": 0,
+          "finished_at": "2026-10-07T16:50:53+00:00",
+          "result_digest": "95c0a91a027e393cf682714064d5a13682fe7e260bb1b329bca8f37778f4d994"
+        }
+      ],
+      "escalated": false
+    },
+    "57": {
+      "issue_number": 57,
+      "fingerprint": "9b070fac207689c3",
+      "detector": "osv_python",
+      "wave": "A",
+      "title": "security(deps): mako 1.4.1 is affected by 1 advisory(ies)",
+      "severity": "high",
+      "attempts": [
+        {
+          "session_id": "devin-fe21198b540c4f70a37fe0481eeff82e",
+          "session_url": "https://app.devin.ai/sessions/fe21198b540c4f70a37fe0481eeff82e",
+          "created_at": "2026-10-07T16:50:47+00:00",
+          "status": "working",
+          "pr_url": null,
+          "outcome": null,
+          "summary": null,
+          "verification": null,
+          "blockers": null,
+          "ci_retries": 0,
+          "finished_at": null,
+          "result_digest": null
+        }
+      ],
+      "escalated": false
+    },
+    "56": {
+      "issue_number": 56,
+      "fingerprint": "9df90eceb60245dc",
+      "detector": "npm_audit",
+      "wave": "A",
+      "title": "security(frontend): upgrade to yeoman-test@8.3.0 to clear 1 advisory chain package(s)",
+      "severity": "critical",
+      "attempts": [
+        {
+          "session_id": "devin-e82d33154031480e8b6502344dc8e9f2",
+          "session_url": "https://app.devin.ai/sessions/e82d33154031480e8b6502344dc8e9f2",
+          "created_at": "2026-10-07T16:50:50+00:00",
           "status": "working",
           "pr_url": null,
           "outcome": null,
