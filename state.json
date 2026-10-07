@@ -627,15 +627,15 @@
           "session_id": "devin-fe21198b540c4f70a37fe0481eeff82e",
           "session_url": "https://app.devin.ai/sessions/fe21198b540c4f70a37fe0481eeff82e",
           "created_at": "2026-10-07T16:50:47+00:00",
-          "status": "working",
-          "pr_url": null,
-          "outcome": null,
-          "summary": null,
-          "verification": null,
-          "blockers": null,
+          "status": "finished",
+          "pr_url": "https://github.com/ehersch/superset/pull/62",
+          "outcome": "fixed",
+          "summary": "Bumped mako from 1.4.1 to 1.4.2 in requirements/base.txt and requirements/development.txt, and raised the mako floors in requirements/base.in and pyproject.toml to 1.4.2. The reason is that 1.4.1 is affected by GHSA-5639-2j2p-m4mx (path traversal via a Windows drive-letter URI in TemplateLookup), which is fixed in 1.4.2.",
+          "verification": "Before: `python -m devin_pipeline.pipeline.cli --dry-run detect --only osv_python` listed `9b070fac207689c3 security(deps): mako 1.4.1 is affected by 1 advisory(ies)` among 6 findings (reproduced). After: the same command printed 5 findings and none was mako (geopy, paramiko, pyjwt, urllib3, werkzeug remain). `curl -s https://api.osv.dev/v1/query -d '{\"package\":{\"name\":\"mako\",\"ecosystem\":\"PyPI\"},\"version\":\"1.4.2\"}'` returned `{}`; for 1.4.1 it returned GHSA-5639-2j2p-m4mx. `grep -rn -i mako requirements/ pyproject.toml` shows the only pins/floors (base.txt, development.txt, base.in, pyproject.toml) and all four are now updated to 1.4.2. With mako 1.4.2 installed in .venv, `.venv/bin/python -m pytest tests/unit_tests -q`: 18293 passed, 38 skipped, 2 xfailed in 1161.62s, exit 0. `git add -u && .venv/bin/pre-commit run`: all hooks passed or skipped. PR CI: 63 passed, 10 skipped, 1 failed. The failure is `dependency-review` with 'Dependency review is not supported on this repository' because Dependency graph is disabled in the fork's settings; it is not caused by this diff.",
+          "blockers": "",
           "ci_retries": 0,
-          "finished_at": null,
-          "result_digest": null
+          "finished_at": "2026-10-07T21:53:46+00:00",
+          "result_digest": "d515aa448534064ac295f105c0f2198abac9d5bf0f8f729cedfc6579ae0a63a1"
         }
       ],
       "escalated": false
@@ -652,15 +652,15 @@
           "session_id": "devin-e82d33154031480e8b6502344dc8e9f2",
           "session_url": "https://app.devin.ai/sessions/e82d33154031480e8b6502344dc8e9f2",
           "created_at": "2026-10-07T16:50:50+00:00",
-          "status": "working",
-          "pr_url": null,
-          "outcome": null,
-          "summary": null,
-          "verification": null,
-          "blockers": null,
+          "status": "finished",
+          "pr_url": "https://github.com/ehersch/superset/pull/61",
+          "outcome": "fixed",
+          "summary": "The named fix target yeoman-test@8.3.0 was wrong \u2014 yeoman-test@11.8.2 is already installed and no advisory resolves through it. The real critical chain is yeoman-generator@9.2.0 \u2192 simple-git (GHSA-x6jw-m9v5-85vh critical, GHSA-g4wm-2vf7-vfgr high, GHSA-v5rq-49vh-5v5c via @simple-git/argv-parser<2.0.1); cleared it with a scoped override forcing simple-git@^4.0.2 inside yeoman-generator, since npm's fix (yeoman-generator@10.0.0, published 2026-10-07) is blocked by .npmrc min-release-age=3 until 2026-10-10.",
+          "verification": "Reproduce: `npm audit --package-lock-only --json | jq '.vulnerabilities | with_entries(select((.value.fixAvailable|type)==\"object\" and .value.fixAvailable.name==\"yeoman-test\"))'` \u2192 {} (nothing fixed by yeoman-test; issue's jq also errors on boolean fixAvailable). Criterion 1+2: after adding `\"yeoman-generator\": {\"simple-git\": \"^4.0.2\"}` to overrides and updating the 3 lockfile nodes (simple-git 3.36.0\u21924.0.2, argv-parser 1.1.1\u21922.0.1, args-pathspec 1.0.3\u21921.0.4), `npm audit --package-lock-only` reports 75 vulns (was 78), critical 6 (was 9); `comm` on vulnerability keys shows only removals: yeoman-generator, simple-git, @simple-git/argv-parser \u2014 zero new advisories. Criterion 3: `npm run build` \u2192 webpack 5.111.0 compiled, exit 0 (4 pre-existing size warnings). Criterion 4: `npm test` in packages/generator-superset fails identically on a clean origin/master worktree (jest.config `transform: {}` cannot parse the .ts suites; yeoman-test ESM top-level-await under require) \u2014 pre-existing, root jest ignores the package via modulePathIgnorePatterns, and all 8 CI sharded-jest shards pass on the PR. `npm ci --dry-run` accepts the lockfile. pre-commit run: all hooks pass/skipped. CI: 48 passed; only dependency-review fails, a known always-fail on this fork (dependency graph disabled in repo settings).",
+          "blockers": "",
           "ci_retries": 0,
-          "finished_at": null,
-          "result_digest": null
+          "finished_at": "2026-10-07T21:53:49+00:00",
+          "result_digest": "7c8594cf306b9004f9d86dbd818cbbd79cb1855c8aba3d8626be6696877311fc"
         }
       ],
       "escalated": false
