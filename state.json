@@ -664,6 +664,31 @@
         }
       ],
       "escalated": false
+    },
+    "59": {
+      "issue_number": 59,
+      "fingerprint": "26a30ec98e34ce4f",
+      "detector": "npm_audit",
+      "wave": "A",
+      "title": "security(frontend): upgrade to concurrently@9.2.1 to clear 2 advisory chain package(s)",
+      "severity": "critical",
+      "attempts": [
+        {
+          "session_id": "devin-46253d4fd2fb4c28aa132ace672ca428",
+          "session_url": "https://app.devin.ai/sessions/46253d4fd2fb4c28aa132ace672ca428",
+          "created_at": "2026-10-08T13:31:28+00:00",
+          "status": "working",
+          "pr_url": null,
+          "outcome": null,
+          "summary": null,
+          "verification": null,
+          "blockers": null,
+          "ci_retries": 0,
+          "finished_at": null,
+          "result_digest": null
+        }
+      ],
+      "escalated": false
     }
   }
 }
