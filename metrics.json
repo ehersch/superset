@@ -1,7 +1,7 @@
 {
-  "issues_tracked": 26,
-  "dispatched": 27,
-  "in_flight": 0,
+  "issues_tracked": 27,
+  "dispatched": 28,
+  "in_flight": 1,
   "settled": 27,
   "fixed_with_pr": 22,
   "escalated": 5,
