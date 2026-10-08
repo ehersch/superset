@@ -677,6 +677,31 @@
           "session_id": "devin-46253d4fd2fb4c28aa132ace672ca428",
           "session_url": "https://app.devin.ai/sessions/46253d4fd2fb4c28aa132ace672ca428",
           "created_at": "2026-10-08T13:31:28+00:00",
+          "status": "finished",
+          "pr_url": "https://github.com/ehersch/superset/pull/64",
+          "outcome": "fixed",
+          "summary": "Added a top-level `\"shell-quote\": \"^1.11.0\"` npm override in superset-frontend, which moves the lockfile from shell-quote 1.9.0 to 1.12.0 and clears critical GHSA-pqg4-j6r4-53mv for both concurrently and shell-quote. I didn't use the issue's fix_target concurrently@9.2.1 because it would downgrade concurrently from ^10.0.5 by a major version, and the patched concurrently@10.0.6 was published today, so .npmrc min-release-age=3 blocks installing it.",
+          "verification": "Repro: the issue's jq command (`fixAvailable.name == \"concurrently\"`) prints {} because fixAvailable is the boolean true, but the full audit output shows shell-quote 1.9.0 as critical (GHSA-pqg4-j6r4-53mv, range >=1.8.4 <1.11.0), affecting concurrently 10.0.5. Before: critical 9 / total 78.\n1) `npm audit --package-lock-only --json` after the change: critical 7 / total 76; `has(\"shell-quote\")` = false and `has(\"concurrently\")` = false.\n2) Comparing package/severity and advisory URL lists before and after: nothing new; only concurrently (critical), shell-quote (critical) and GHSA-pqg4-j6r4-53mv were removed.\n3) `~/.npm11/node_modules/.bin/npm ci --ignore-scripts` exit 0; `npm run build`: webpack 5.111.0 compiled with 4 warnings, exit 0.\n4) No Jest suite imports concurrently or shell-quote (grep for imports/requires across src, packages, plugins, spec, scripts found 0 files). concurrently is only used by the `test-storybook:ci` npm script. Instead: `npx concurrently --kill-others --success first --names A,B \"echo hello from A\" \"sleep 5\"` exit 0; shell-quote 1.12.0 quote() and parse() checked by hand; `npx jest packages/superset-core/src/theme`: 4 suites / 104 tests passed.\nLint: `pre-commit run` on the staged diff passed.\nCI on PR #64: 48 passed. Every sharded-jest-tests shard, test-storybook (which uses concurrently), frontend-build, lint-frontend, cypress and playwright passed. The one failure, dependency-review, is a repo setting: 'Dependency review is not supported on this repository' because Dependency graph is disabled on the fork.",
+          "blockers": "",
+          "ci_retries": 0,
+          "finished_at": "2026-10-08T15:40:32+00:00",
+          "result_digest": "03eb75969cc8ea3456716dd7361c438fc88d18bed25c7c764e5ae38fef22a9c6"
+        }
+      ],
+      "escalated": false
+    },
+    "55": {
+      "issue_number": 55,
+      "fingerprint": "1ace2b0be2c51819",
+      "detector": "npm_audit",
+      "wave": "A",
+      "title": "security(frontend): upgrade to yeoman-generator@5.10.0 to clear 3 advisory chain package(s)",
+      "severity": "critical",
+      "attempts": [
+        {
+          "session_id": "devin-4623f0cdb806453e8b5a49385d73fbbe",
+          "session_url": "https://app.devin.ai/sessions/4623f0cdb806453e8b5a49385d73fbbe",
+          "created_at": "2026-10-08T15:40:28+00:00",
           "status": "working",
           "pr_url": null,
           "outcome": null,
