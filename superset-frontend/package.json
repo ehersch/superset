@@ -429,7 +429,10 @@
     },
     "tar": "^7.5.16",
     "typescript-json-schema": "^0.68.0",
-    "uuid": "$uuid"
+    "uuid": "$uuid",
+    "yeoman-generator": {
+      "simple-git": "^4.0.2"
+    }
   },
   "browserslist": [
     "last 3 chrome versions",
